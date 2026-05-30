@@ -74,19 +74,38 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
     - name: Download Build Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/download-artifact@v4
       with:
         name: meow-backend-binary
         path: .
 
-    - name: Copy Binary to VPS via SCP
+    - name: Stop Existing Service via SSH (Avoid Text file busy)
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        script: |
+          echo "Tạm dừng dịch vụ cũ để giải phóng file binary trước khi truyền tải..."
+          sudo systemctl stop meow-backend || true
+          
+          # Giải phóng triệt để các tiến trình mồ côi chiếm cổng 8080 nếu có
+          sudo fuser -k 8080/tcp || true
+          pkill -f meow-backend || true
+
+    - name: Copy Files to VPS via SCP
       uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
-        source: "meow-backend"
+        source: |
+          meow-backend
+          .github/workflows/meow-backend.service
         target: "/home/hungg562002/project/meow/backend"
         overwrite: true
 
@@ -108,45 +127,21 @@ jobs:
             echo "PORT=8080" > .env
           fi
 
-          # DỌN DẸP TIẾN TRÌNH CŨ:
-          # Tắt bất kỳ tiến trình thủ công nào đang chiếm cổng 8080 (giúp giải phóng tài nguyên)
-          echo "Đang dọn dẹp các tiến trình cũ chiếm dụng cổng 8080..."
-          sudo fuser -k 8080/tcp || true
-          pkill -f meow-backend || true
-
-          # TỰ ĐỘNG CẤU HÌNH SYSTEMD SERVICE (Nếu chạy lần đầu tiên trên VPS):
-          if [ ! -f /etc/systemd/system/meow-backend.service ]; then
-            echo "Đang tạo mới file cấu hình Systemd Service..."
-            sudo bash -c 'cat <<EOF > /etc/systemd/system/meow-backend.service
-          [Unit]
-          Description=Meow Go Backend Service
-          After=network.target
-
-          [Service]
-          Type=simple
-          User=hungg562002
-          WorkingDirectory=/home/hungg562002/project/meow/backend
-          ExecStart=/home/hungg562002/project/meow/backend/meow-backend
-          Restart=always
-          RestartSec=5
-          Environment=PORT=8080
-          StandardOutput=syslog
-          StandardError=syslog
-          SyslogIdentifier=meow-backend
-
-          [Install]
-          WantedBy=multi-user.target
-          EOF'
-            
-            # Reload daemon để hệ thống nhận diện service mới
-            sudo systemctl daemon-reload
-            
-            # Kích hoạt chế độ tự động chạy dịch vụ khi VPS khởi động lại
-            sudo systemctl enable meow-backend
-          fi
+          # CẬP NHẬT CẤU HÌNH SYSTEMD SERVICE TỪ FILE TRUYỀN LÊN:
+          echo "Đang cập nhật file cấu hình Systemd Service từ kho lưu trữ..."
+          sudo cp .github/workflows/meow-backend.service /etc/systemd/system/meow-backend.service
           
-          # KHỞI CHẠY/KHỞI ĐỘNG LẠI DỊCH VỤ QUA SYSTEMD:
-          echo "Khởi động lại dịch vụ meow-backend qua systemd..."
+          # Thiết lập quyền 644 chuẩn cho file cấu hình hệ thống
+          sudo chmod 644 /etc/systemd/system/meow-backend.service
+          
+          # Reload daemon để hệ thống nhận diện file cấu hình mới
+          sudo systemctl daemon-reload
+          
+          # Kích hoạt chế độ tự động chạy dịch vụ khi VPS khởi động lại
+          sudo systemctl enable meow-backend
+          
+          # KHỞI CHẠY LẠI DỊCH VỤ MỚI QUA SYSTEMD:
+          echo "Khởi động dịch vụ meow-backend mới qua systemd..."
           sudo systemctl restart meow-backend
           
           # Chờ 3 giây để hệ thống ổn định và kiểm tra trạng thái hoạt động
