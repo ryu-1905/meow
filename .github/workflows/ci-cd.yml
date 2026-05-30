@@ -90,7 +90,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd frontend
-        npm ci
+        npm ci --legacy-peer-deps
 
     - name: Build Frontend SvelteKit (via adapter-auto)
       run: |
@@ -194,7 +194,7 @@ jobs:
           
           # Cài đặt thư viện production Node.js để chạy server SvelteKit
           echo "Đang cài đặt thư viện production Node.js..."
-          npm install --omit=dev
+          npm install --omit=dev --legacy-peer-deps
           
           # Tạo cấu hình file .env động trên VPS nếu chưa tồn tại
           if [ ! -f .env ]; then
