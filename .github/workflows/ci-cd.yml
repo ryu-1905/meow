@@ -1,11 +1,11 @@
-name: Go Backend CI/CD
+name: Meow Fullstack CI/CD
 
 on:
   push:
     branches: [ "main" ]
 
 jobs:
-  build-and-verify:
+  build-backend:
     name: Build & Verify Backend
     runs-on: ubuntu-latest
 
@@ -60,16 +60,56 @@ jobs:
         echo "Ứng dụng khởi chạy thử nghiệm thành công trên runner!"
 
     # Lưu lại file binary đã build để dùng ở job deploy tiếp theo
-    - name: Upload Build Artifact
+    - name: Upload Backend Artifact
       uses: actions/upload-artifact@v4
       with:
         name: meow-backend-binary
         path: backend/meow-backend
         retention-days: 1
 
+  build-frontend:
+    name: Build Frontend (SvelteKit)
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Create build-time .env
+      run: |
+        cd frontend
+        echo "PUBLIC_BACKEND_URL=https://meow.backend.viiic.net" > .env
+
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Build Frontend SvelteKit (via adapter-auto)
+      run: |
+        cd frontend
+        npm run build
+
+    - name: Upload Frontend Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: meow-frontend-assets
+        path: |
+          frontend/build
+          frontend/package.json
+          frontend/package-lock.json
+        retention-days: 1
+
   deploy:
     name: Deploy to VPS
-    needs: build-and-verify
+    needs: [build-backend, build-frontend]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
 
@@ -77,30 +117,41 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Download Build Artifact
+    - name: Download Backend Artifact
       uses: actions/download-artifact@v4
       with:
         name: meow-backend-binary
         path: .
 
-    - name: Prepare Service File for Deploy
-      run: cp .github/workflows/meow-backend.service ./meow-backend.service
+    - name: Download Frontend Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: meow-frontend-assets
+        path: frontend-deploy
 
-    - name: Stop Existing Service via SSH (Avoid Text file busy)
+    - name: Prepare Service Files for Deploy (Flat deployment)
+      run: |
+        cp .github/workflows/meow-backend.service ./meow-backend.service
+        cp .github/workflows/meow-frontend.service ./meow-frontend.service
+
+    - name: Stop Existing Services via SSH (Avoid Text file busy)
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
         script: |
-          echo "Tạm dừng dịch vụ cũ để giải phóng file binary trước khi truyền tải..."
+          echo "Tạm dừng toàn bộ dịch vụ cũ..."
           sudo systemctl stop meow-backend || true
+          sudo systemctl stop meow-frontend || true
           
-          # Giải phóng triệt để các tiến trình mồ côi chiếm cổng 8080 nếu có
+          # Giải phóng các cổng kết nối 8080 và 3000
           sudo fuser -k 8080/tcp || true
+          sudo fuser -k 3000/tcp || true
+          
           pkill -x meow-backend || true
 
-    - name: Copy Files to VPS via SCP
+    - name: Copy Backend Files to VPS via SCP
       uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.SSH_HOST }}
@@ -110,41 +161,61 @@ jobs:
         target: "/home/hungg562002/project/meow/backend"
         overwrite: true
 
-    - name: Setup and Restart Systemd Service via SSH
+    - name: Copy Frontend Files to VPS via SCP
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        source: "frontend-deploy/,meow-frontend.service"
+        target: "/home/hungg562002/project/meow/frontend"
+        overwrite: true
+
+    - name: Setup and Restart Services via SSH
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
         script: |
-          mkdir -p /home/hungg562002/project/meow/backend
+          # 1. SETUP BACKEND GO
           cd /home/hungg562002/project/meow/backend
-          
-          # Cấp quyền thực thi cho file binary mới vừa upload lên
           chmod +x meow-backend
-          
-          # Tạo file .env nếu chưa có
-          if [ ! -f .env ]; then
-            echo "PORT=8080" > .env
-          fi
-
-          # CẬP NHẬT CẤU HÌNH SYSTEMD SERVICE TỪ FILE TRUYỀN LÊN:
-          echo "Đang cập nhật file cấu hình Systemd Service từ kho lưu trữ..."
+          if [ ! -f .env ]; then echo "PORT=8080" > .env; fi
           sudo cp meow-backend.service /etc/systemd/system/meow-backend.service
-          
-          # Thiết lập quyền 644 chuẩn cho file cấu hình hệ thống
           sudo chmod 644 /etc/systemd/system/meow-backend.service
+
+          # 2. SETUP FRONTEND SVELTEKIT
+          cd /home/hungg562002/project/meow/frontend
           
-          # Reload daemon để hệ thống nhận diện file cấu hình mới
+          # Dọn dẹp cấu trúc thư mục từ scp (đưa file trong frontend-deploy/ ra ngoài)
+          cp -r frontend-deploy/* ./ || true
+          rm -rf frontend-deploy || true
+          
+          # Cài đặt thư viện production Node.js để chạy server SvelteKit
+          echo "Đang cài đặt thư viện production Node.js..."
+          npm install --omit=dev
+          
+          # Tạo cấu hình file .env động trên VPS nếu chưa tồn tại
+          if [ ! -f .env ]; then
+            echo "PORT=3000" > .env
+            echo "ORIGIN=http://157.7.203.71:3000" >> .env
+            echo "Khởi tạo file .env thành công."
+          fi
+          
+          # Cập nhật cấu hình Systemd Service cho Frontend
+          sudo cp meow-frontend.service /etc/systemd/system/meow-frontend.service
+          sudo chmod 644 /etc/systemd/system/meow-frontend.service
+
+          # 3. KÍCH HOẠT VÀ RESTART CẢ 2 DỊCH VỤ QUA SYSTEMD
+          echo "Reloading daemon và khởi động dịch vụ..."
           sudo systemctl daemon-reload
+          sudo systemctl enable meow-backend meow-frontend
           
-          # Kích hoạt chế độ tự động chạy dịch vụ khi VPS khởi động lại
-          sudo systemctl enable meow-backend
-          
-          # KHỞI CHẠY LẠI DỊCH VỤ MỚI QUA SYSTEMD:
-          echo "Khởi động dịch vụ meow-backend mới qua systemd..."
           sudo systemctl restart meow-backend
+          sudo systemctl restart meow-frontend
           
-          # Chờ 3 giây để hệ thống ổn định và kiểm tra trạng thái hoạt động
+          # Kiểm tra trạng thái hoạt động của cả hai
           sleep 3
           sudo systemctl status meow-backend --no-pager
+          sudo systemctl status meow-frontend --no-pager
