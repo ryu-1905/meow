@@ -243,7 +243,7 @@ jobs:
 
             # Cài đặt thư viện production Node.js bằng tệp thực thi NPM đã tìm thấy
             echo "Đang cài đặt thư viện production Node.js..."
-            $NPM_BIN install --omit=dev --ignore-engines --legacy-peer-deps
+            $NPM_BIN install --ignore-engines --legacy-peer-deps
 
             # Tạo cấu hình file .env động trên VPS nếu chưa tồn tại
             if [ ! -f .env ]; then
