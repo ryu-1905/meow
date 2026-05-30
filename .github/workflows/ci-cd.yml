@@ -95,7 +95,7 @@ jobs:
           
           # Giải phóng triệt để các tiến trình mồ côi chiếm cổng 8080 nếu có
           sudo fuser -k 8080/tcp || true
-          pkill -f meow-backend || true
+          pkill -x meow-backend || true
 
     - name: Copy Files to VPS via SCP
       uses: appleboy/scp-action@v0.1.7
