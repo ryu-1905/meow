@@ -178,9 +178,54 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            # NẠP NVM (Node Version Manager) ĐỂ CÓ LỆNH NODE/NPM TRONG PHÊN PHI TƯƠNG TÁC:
+            # TỰ ĐỘNG DÒ TÌM ĐƯỜNG DẪN NODE & NPM TRÊN VPS (HỖ TRỢ NVM, FNM, PROFILE, HỆ THỐNG):
+            NODE_BIN=""
+            NPM_BIN=""
+
+            # Bước A: Thử nạp NVM mặc định
             export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            if [ -s "$NVM_DIR/nvm.sh" ]; then
+              \. "$NVM_DIR/nvm.sh"
+              NODE_BIN=$(which node || echo "")
+              NPM_BIN=$(which npm || echo "")
+            fi
+
+            # Bước B: Nếu chưa tìm thấy, quét sâu thư mục cài đặt phiên bản của NVM
+            if [ -z "$NODE_BIN" ] && [ -d "$HOME/.nvm/versions/node" ]; then
+              NODE_BIN=$(find $HOME/.nvm/versions/node -name "node" -type f -executable | head -n 1 || echo "")
+              if [ -n "$NODE_BIN" ]; then
+                NPM_BIN="$(dirname "$NODE_BIN")/npm"
+              fi
+            fi
+
+            # Bước C: Thử nạp lại các cấu hình shell của user
+            if [ -z "$NODE_BIN" ]; then
+              source $HOME/.profile || true
+              source $HOME/.bashrc || true
+              NODE_BIN=$(which node || echo "")
+              NPM_BIN=$(which npm || echo "")
+            fi
+
+            # Bước D: Dò tìm trong các thư mục Linux tiêu chuẩn
+            if [ -z "$NODE_BIN" ]; then
+              for path in "/usr/local/bin/node" "/usr/bin/node" "/bin/node" "/usr/sbin/node" "/sbin/node"; do
+                if [ -x "$path" ]; then
+                  NODE_BIN="$path"
+                  NPM_BIN="$(dirname "$path")/npm"
+                  break
+                fi
+              done
+            fi
+
+            echo "=== THÔNG TIN AUTO-DISCOVERY NODE ==="
+            echo "Node binary: $NODE_BIN"
+            echo "NPM binary:  $NPM_BIN"
+            echo "====================================="
+
+            if [ -z "$NODE_BIN" ] || [ -z "$NPM_BIN" ]; then
+              echo "LỖI: Không thể phát hiện được Node.js hoặc NPM trên VPS!"
+              exit 1
+            fi
 
             # 1. SETUP BACKEND GO
             cd /home/hungg562002/project/meow/backend
@@ -196,9 +241,9 @@ jobs:
             cp -r frontend-deploy/* ./ || true
             rm -rf frontend-deploy || true
 
-            # Cài đặt thư viện production Node.js để chạy server SvelteKit
+            # Cài đặt thư viện production Node.js bằng tệp thực thi NPM đã tìm thấy
             echo "Đang cài đặt thư viện production Node.js..."
-            npm install --omit=dev --ignore-engines --legacy-peer-deps
+            $NPM_BIN install --omit=dev --ignore-engines --legacy-peer-deps
 
             # Tạo cấu hình file .env động trên VPS nếu chưa tồn tại
             if [ ! -f .env ]; then
@@ -210,11 +255,8 @@ jobs:
             # Cập nhật cấu hình Systemd Service cho Frontend
             sudo cp meow-frontend.service /etc/systemd/system/meow-frontend.service
             
-            # TỰ ĐỘNG PHÁT HIỆN ĐƯỜNG DẪN NODE THỰC TẾ (Sửa lỗi 203/EXEC do dùng NVM):
-            NODE_PATH=$(which node)
-            echo "Đường dẫn Node phát hiện được trên VPS: $NODE_PATH"
-            sudo sed -i "s|/usr/bin/node|$NODE_PATH|g" /etc/systemd/system/meow-frontend.service
-            
+            # Ghi đè đường dẫn Node thực tế vừa tìm thấy vào file Service của Systemd
+            sudo sed -i "s|/usr/bin/node|$NODE_BIN|g" /etc/systemd/system/meow-frontend.service
             sudo chmod 644 /etc/systemd/system/meow-frontend.service
 
             # 3. KÍCH HOẠT VÀ RESTART CẢ 2 DỊCH VỤ QUA SYSTEMD
