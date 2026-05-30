@@ -63,13 +63,19 @@
 				const allocVal = parseMemory(data.server_info.memory_usage.alloc);
 				const sysVal = parseMemory(data.server_info.memory_usage.sys);
 				const now = new Date();
-				const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+				const timeStr = now.toLocaleTimeString([], {
+					hour: '2-digit',
+					minute: '2-digit',
+					second: '2-digit'
+				});
 
-				memoryHistory = [...memoryHistory, { time: timeStr, alloc: allocVal, sys: sysVal }].slice(-15);
+				memoryHistory = [...memoryHistory, { time: timeStr, alloc: allocVal, sys: sysVal }].slice(
+					-15
+				);
 			}
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Fetch health failed:', err);
-			error = err.message || 'Không thể kết nối đến Backend Server';
+			error = (err as Error).message || 'Không thể kết nối đến Backend Server';
 			healthData = null;
 		}
 	};
@@ -94,7 +100,7 @@
 	// Các giá trị tính toán phái sinh ($derived) cho biểu đồ lịch sử Y-axis
 	let maxMem = $derived(
 		memoryHistory.length > 0
-			? Math.max(10, Math.max(...memoryHistory.map(p => Math.max(p.alloc, p.sys))) * 1.15)
+			? Math.max(10, Math.max(...memoryHistory.map((p) => Math.max(p.alloc, p.sys))) * 1.15)
 			: 30
 	);
 
@@ -115,22 +121,26 @@
 	);
 
 	let allocPath = $derived(
-		allocPoints.length > 0 ? 'M ' + allocPoints.map(pt => `${pt.x} ${pt.y}`).join(' L ') : ''
+		allocPoints.length > 0 ? 'M ' + allocPoints.map((pt) => `${pt.x} ${pt.y}`).join(' L ') : ''
 	);
 
 	let allocAreaPath = $derived(
 		allocPoints.length > 0
-			? `M ${allocPoints[0].x} 170 L ` + allocPoints.map(pt => `${pt.x} ${pt.y}`).join(' L ') + ` L ${allocPoints[allocPoints.length - 1].x} 170 Z`
+			? `M ${allocPoints[0].x} 170 L ` +
+					allocPoints.map((pt) => `${pt.x} ${pt.y}`).join(' L ') +
+					` L ${allocPoints[allocPoints.length - 1].x} 170 Z`
 			: ''
 	);
 
 	let sysPath = $derived(
-		sysPoints.length > 0 ? 'M ' + sysPoints.map(pt => `${pt.x} ${pt.y}`).join(' L ') : ''
+		sysPoints.length > 0 ? 'M ' + sysPoints.map((pt) => `${pt.x} ${pt.y}`).join(' L ') : ''
 	);
 
 	let sysAreaPath = $derived(
 		sysPoints.length > 0
-			? `M ${sysPoints[0].x} 170 L ` + sysPoints.map(pt => `${pt.x} ${pt.y}`).join(' L ') + ` L ${sysPoints[sysPoints.length - 1].x} 170 Z`
+			? `M ${sysPoints[0].x} 170 L ` +
+					sysPoints.map((pt) => `${pt.x} ${pt.y}`).join(' L ') +
+					` L ${sysPoints[sysPoints.length - 1].x} 170 Z`
 			: ''
 	);
 
@@ -139,7 +149,14 @@
 	// Tỷ lệ phần trăm bộ nhớ RAM thực tế đang dùng
 	let ramPercentage = $derived(
 		healthData && healthData.server_info
-			? Math.min(100, Math.round((parseMemory(healthData.server_info.memory_usage.alloc) / Math.max(1, parseMemory(healthData.server_info.memory_usage.sys))) * 100))
+			? Math.min(
+					100,
+					Math.round(
+						(parseMemory(healthData.server_info.memory_usage.alloc) /
+							Math.max(1, parseMemory(healthData.server_info.memory_usage.sys))) *
+							100
+					)
+				)
 			: 0
 	);
 
@@ -171,9 +188,16 @@
 				<span class="badge badge-error pulse-error shadow-error font-semibold">OFFLINE</span>
 			{:else if healthData}
 				<span class="badge badge-success pulse-success shadow-success font-semibold">ONLINE</span>
+				{#if lastRefreshed}
+					<span class="text-xs text-muted font-mono" style="margin-left: 10px; opacity: 0.8;"
+						>Cập nhật lúc: {lastRefreshed}</span
+					>
+				{/if}
 			{/if}
 		</div>
-		<p class="dashboard-subtitle">Hệ thống giám sát sức khỏe dịch vụ và hiệu suất tài nguyên trực quan</p>
+		<p class="dashboard-subtitle">
+			Hệ thống giám sát sức khỏe dịch vụ và hiệu suất tài nguyên trực quan
+		</p>
 	</div>
 
 	<!-- Dashboard Bố cục Grid -->
@@ -185,13 +209,19 @@
 				<div class="card-header">
 					<h2 class="card-title-with-icon">
 						<svg class="title-icon" viewBox="0 0 24 24" width="22" height="22">
-							<path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+							<path
+								fill="currentColor"
+								d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"
+							/>
 						</svg>
 						Hệ thống & Runtime Go
 					</h2>
 					<button class="refresh-btn" onclick={fetchHealth} aria-label="Làm mới">
 						<svg class="refresh-icon" viewBox="0 0 24 24" width="18" height="18">
-							<path fill="currentColor" d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+							<path
+								fill="currentColor"
+								d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"
+							/>
 						</svg>
 					</button>
 				</div>
@@ -201,11 +231,20 @@
 						<div class="offline-alert">
 							<div class="offline-icon-container">
 								<svg class="offline-alert-icon" viewBox="0 0 24 24" width="48" height="48">
-									<path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+									<path
+										fill="currentColor"
+										d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"
+									/>
 								</svg>
 							</div>
 							<p class="error-msg">{error}</p>
-							<p class="error-hint">Hãy đảm bảo máy chủ Backend đang chạy ở <a href={PUBLIC_BACKEND_URL} target="_blank">{PUBLIC_BACKEND_URL}</a></p>
+							<p class="error-hint">
+								Hãy đảm bảo máy chủ Backend đang chạy ở <!-- eslint-disable-next-line svelte/no-navigation-without-resolve --><a
+									href={PUBLIC_BACKEND_URL}
+									target="_blank"
+									rel="noopener noreferrer">{PUBLIC_BACKEND_URL}</a
+								>
+							</p>
 						</div>
 					{:else if healthData}
 						<div class="mini-stats-grid">
@@ -213,12 +252,17 @@
 							<div class="stat-item">
 								<div class="stat-icon-wrapper cyan">
 									<svg viewBox="0 0 24 24" width="20" height="20">
-										<path fill="currentColor" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+										<path
+											fill="currentColor"
+											d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"
+										/>
 									</svg>
 								</div>
 								<div class="stat-info">
 									<span class="stat-label">Hệ điều hành / Arch</span>
-									<span class="stat-value">{healthData.server_info.os} ({healthData.server_info.architecture})</span>
+									<span class="stat-value"
+										>{healthData.server_info.os} ({healthData.server_info.architecture})</span
+									>
 								</div>
 							</div>
 
@@ -226,7 +270,10 @@
 							<div class="stat-item">
 								<div class="stat-icon-wrapper purple">
 									<svg viewBox="0 0 24 24" width="20" height="20">
-										<path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.53c-.26-.81-1-1.4-1.9-1.4h-1v-3c0-.55-.45-1-1-1h-6v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+										<path
+											fill="currentColor"
+											d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.53c-.26-.81-1-1.4-1.9-1.4h-1v-3c0-.55-.45-1-1-1h-6v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"
+										/>
 									</svg>
 								</div>
 								<div class="stat-info">
@@ -239,7 +286,10 @@
 							<div class="stat-item">
 								<div class="stat-icon-wrapper green">
 									<svg viewBox="0 0 24 24" width="20" height="20">
-										<path fill="currentColor" d="M4 6H2v2h2v2H2v2h2v2H2v2h2v2h2v2h2v-2h2v2h2v-2h2v2h2v-2h2v2h2v-2h-2v-2h2v-2h-2v-2h2v-2h-2V8h2V6h-2V4h-2v2h-2V4h-2v2h-2V4H8v2H6V4H4v2zm4 4h8v8H8v-8z"/>
+										<path
+											fill="currentColor"
+											d="M4 6H2v2h2v2H2v2h2v2H2v2h2v2h2v2h2v-2h2v2h2v-2h2v2h2v-2h2v2h2v-2h-2v-2h2v-2h-2v-2h2v-2h-2V8h2V6h-2V4h-2v2h-2V4h-2v2h-2V4H8v2H6V4H4v2zm4 4h8v8H8v-8z"
+										/>
 									</svg>
 								</div>
 								<div class="stat-info">
@@ -252,7 +302,10 @@
 							<div class="stat-item">
 								<div class="stat-icon-wrapper gold">
 									<svg viewBox="0 0 24 24" width="20" height="20">
-										<path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/>
+										<path
+											fill="currentColor"
+											d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"
+										/>
 									</svg>
 								</div>
 								<div class="stat-info">
@@ -265,7 +318,10 @@
 							<div class="stat-item full-width">
 								<div class="stat-icon-wrapper accent">
 									<svg viewBox="0 0 24 24" width="20" height="20">
-										<path fill="currentColor" d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/>
+										<path
+											fill="currentColor"
+											d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"
+										/>
 									</svg>
 								</div>
 								<div class="stat-info">
@@ -282,11 +338,14 @@
 			<div class="glass-card memory-chart-card">
 				<h2 class="card-title-with-icon">
 					<svg class="title-icon" viewBox="0 0 24 24" width="22" height="22">
-						<path fill="currentColor" d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99l1.5 1.5z"/>
+						<path
+							fill="currentColor"
+							d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99l1.5 1.5z"
+						/>
 					</svg>
 					Lịch sử Bộ nhớ RAM (Alloc vs Sys)
 				</h2>
-				
+
 				<div class="chart-container">
 					{#if memoryHistory.length === 0}
 						<div class="chart-empty">
@@ -295,10 +354,14 @@
 						</div>
 					{:else}
 						<div class="chart-legend">
-							<span class="legend-item"><span class="legend-color alloc"></span>RAM Sử dụng (Alloc)</span>
-							<span class="legend-item"><span class="legend-color sys"></span>RAM Hệ thống cấp (Sys)</span>
+							<span class="legend-item"
+								><span class="legend-color alloc"></span>RAM Sử dụng (Alloc)</span
+							>
+							<span class="legend-item"
+								><span class="legend-color sys"></span>RAM Hệ thống cấp (Sys)</span
+							>
 						</div>
-						
+
 						<svg class="svg-chart" viewBox="0 0 500 220" width="100%" height="220">
 							<defs>
 								<linearGradient id="allocGrad" x1="0" y1="0" x2="0" y2="1">
@@ -312,10 +375,19 @@
 							</defs>
 
 							<!-- Các đường lưới Grid ngang -->
-							{#each yGridValues as val}
+							{#each yGridValues as val (val)}
 								{@const y = 170 - (val / maxMem) * 140}
-								<line x1="50" x2="480" y1={y} y2={y} stroke="rgba(255,255,255,0.06)" stroke-dasharray="3,3" />
-								<text x="42" y={y + 3} fill="var(--text-muted)" font-size="9" text-anchor="end">{val.toFixed(1)} M</text>
+								<line
+									x1="50"
+									x2="480"
+									y1={y}
+									y2={y}
+									stroke="rgba(255,255,255,0.06)"
+									stroke-dasharray="3,3"
+								/>
+								<text x="42" y={y + 3} fill="var(--text-muted)" font-size="9" text-anchor="end"
+									>{val.toFixed(1)} M</text
+								>
 							{/each}
 
 							<!-- Trục X mờ -->
@@ -331,21 +403,49 @@
 
 							<!-- Vẽ đường (Line) -->
 							{#if sysPath}
-								<path d={sysPath} fill="none" stroke="var(--accent-purple)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+								<path
+									d={sysPath}
+									fill="none"
+									stroke="var(--accent-purple)"
+									stroke-width="2.5"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
 							{/if}
 							{#if allocPath}
-								<path d={allocPath} fill="none" stroke="var(--accent-cyan)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+								<path
+									d={allocPath}
+									fill="none"
+									stroke="var(--accent-cyan)"
+									stroke-width="2.5"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
 							{/if}
 
 							<!-- Các chấm tròn tại các điểm lấy mẫu -->
-							{#each allocPoints as pt}
-								<circle cx={pt.x} cy={pt.y} r="3.5" fill="var(--bg-primary)" stroke="var(--accent-cyan)" stroke-width="2" />
+							{#each allocPoints as pt, idx (idx)}
+								<circle
+									cx={pt.x}
+									cy={pt.y}
+									r="3.5"
+									fill="var(--bg-primary)"
+									stroke="var(--accent-cyan)"
+									stroke-width="2"
+								/>
 							{/each}
 
 							<!-- Nhãn trục X thời gian (Hiển thị giãn cách để tránh chồng chéo) -->
-							{#each allocPoints as pt, idx}
+							{#each allocPoints as pt, idx (idx)}
 								{#if idx % 3 === 0 || idx === memoryHistory.length - 1}
-									<text x={pt.x} y="192" fill="var(--text-muted)" font-size="9" text-anchor="middle" font-family="monospace">{pt.point.time}</text>
+									<text
+										x={pt.x}
+										y="192"
+										fill="var(--text-muted)"
+										font-size="9"
+										text-anchor="middle"
+										font-family="monospace">{pt.point.time}</text
+									>
 									<line x1={pt.x} x2={pt.x} y1="170" y2="174" stroke="rgba(255,255,255,0.2)" />
 								{/if}
 							{/each}
@@ -361,7 +461,10 @@
 			<div class="glass-card ram-gauge-card">
 				<h2 class="card-title-with-icon">
 					<svg class="title-icon" viewBox="0 0 24 24" width="22" height="22">
-						<path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93h2c0 3.14 2.5 5.5 5 5v2.93zM12 4c3.95 0 7 3.05 7 7h-2c0-3.14-2.5-5.5-5-5V4.07z"/>
+						<path
+							fill="currentColor"
+							d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93h2c0 3.14 2.5 5.5 5 5v2.93zM12 4c3.95 0 7 3.05 7 7h-2c0-3.14-2.5-5.5-5-5V4.07z"
+						/>
 					</svg>
 					Tải lượng RAM Hiện tại
 				</h2>
@@ -384,11 +487,18 @@
 								<circle class="gauge-bg" cx="80" cy="80" r="66" stroke-width="12" fill="none" />
 								<!-- Vòng tiến trình % thực tế -->
 								<!-- Chu vi = 2 * PI * r = 2 * 3.14159 * 66 = 414.7 -->
-								<circle class="gauge-progress" cx="80" cy="80" r="66" stroke-width="12" fill="none"
-										stroke="url(#gaugeGrad)"
-										stroke-dasharray="414.7"
-										stroke-dashoffset={414.7 - (ramPercentage / 100) * 414.7}
-										stroke-linecap="round" />
+								<circle
+									class="gauge-progress"
+									cx="80"
+									cy="80"
+									r="66"
+									stroke-width="12"
+									fill="none"
+									stroke="url(#gaugeGrad)"
+									stroke-dasharray="414.7"
+									stroke-dashoffset={414.7 - (ramPercentage / 100) * 414.7}
+									stroke-linecap="round"
+								/>
 							</svg>
 							<div class="gauge-text-overlay">
 								<span class="gauge-value">{ramPercentage}%</span>
@@ -407,7 +517,8 @@
 							</div>
 							<div class="gauge-stat-row">
 								<span class="label">Tổng tích lũy (Total):</span>
-								<span class="val text-muted">{healthData.server_info.memory_usage.total_alloc}</span>
+								<span class="val text-muted">{healthData.server_info.memory_usage.total_alloc}</span
+								>
 							</div>
 							<div class="gauge-stat-row">
 								<span class="label">Chu kỳ dọn rác (GC):</span>
@@ -426,7 +537,10 @@
 			<div class="glass-card console-logs-card">
 				<h2 class="card-title-with-icon">
 					<svg class="title-icon" viewBox="0 0 24 24" width="22" height="22">
-						<path fill="currentColor" d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 12H4v-2h8v2zm8-4H4V8h16v4z"/>
+						<path
+							fill="currentColor"
+							d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 12H4v-2h8v2zm8-4H4V8h16v4z"
+						/>
 					</svg>
 					Nhật ký Hệ thống (Server Live Logs)
 				</h2>
@@ -441,7 +555,8 @@
 					<div class="terminal-body" bind:this={logsContainer}>
 						{#if error}
 							<div class="log-line text-danger font-semibold">
-								<span class="log-arrow">&gt;</span> ERROR: Không thể tải log. Kết nối đến server thất bại.
+								<span class="log-arrow">&gt;</span> ERROR: Không thể tải log. Kết nối đến server thất
+								bại.
 							</div>
 						{:else if healthData && healthData.app_logs}
 							{#if healthData.app_logs.length === 0}
@@ -449,9 +564,10 @@
 									<span class="log-arrow">&gt;</span> Chờ ghi nhận log hoạt động mới...
 								</div>
 							{:else}
-								{#each healthData.app_logs as log}
+								{#each healthData.app_logs as log, idx (idx)}
 									<div class="log-line">
 										<span class="log-arrow">&gt;</span>
+										<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 										<span class="log-content">{@html formatLogLine(log)}</span>
 									</div>
 								{/each}
@@ -512,7 +628,8 @@
 		gap: 25px;
 	}
 
-	.col-left, .col-right {
+	.col-left,
+	.col-right {
 		display: flex;
 		flex-direction: column;
 		gap: 25px;
@@ -667,11 +784,26 @@
 		border-radius: 10px;
 	}
 
-	.stat-icon-wrapper.cyan { background: rgba(0, 242, 254, 0.1); color: var(--accent-cyan); }
-	.stat-icon-wrapper.purple { background: rgba(79, 172, 254, 0.1); color: var(--accent-purple); }
-	.stat-icon-wrapper.green { background: rgba(56, 239, 125, 0.1); color: var(--accent-green); }
-	.stat-icon-wrapper.gold { background: rgba(248, 173, 157, 0.1); color: var(--accent-gold); }
-	.stat-icon-wrapper.accent { background: rgba(79, 172, 254, 0.15); color: var(--text-primary); }
+	.stat-icon-wrapper.cyan {
+		background: rgba(0, 242, 254, 0.1);
+		color: var(--accent-cyan);
+	}
+	.stat-icon-wrapper.purple {
+		background: rgba(79, 172, 254, 0.1);
+		color: var(--accent-purple);
+	}
+	.stat-icon-wrapper.green {
+		background: rgba(56, 239, 125, 0.1);
+		color: var(--accent-green);
+	}
+	.stat-icon-wrapper.gold {
+		background: rgba(248, 173, 157, 0.1);
+		color: var(--accent-gold);
+	}
+	.stat-icon-wrapper.accent {
+		background: rgba(79, 172, 254, 0.15);
+		color: var(--text-primary);
+	}
 
 	.stat-info {
 		display: flex;
@@ -748,8 +880,12 @@
 		border-radius: 3px;
 	}
 
-	.legend-color.alloc { background-color: var(--accent-cyan); }
-	.legend-color.sys { background-color: var(--accent-purple); }
+	.legend-color.alloc {
+		background-color: var(--accent-cyan);
+	}
+	.legend-color.sys {
+		background-color: var(--accent-purple);
+	}
 
 	.svg-chart {
 		overflow: visible;
@@ -820,7 +956,7 @@
 		width: 160px;
 		height: 160px;
 		border-radius: 50%;
-		border: 8px solid rgba(255,255,255,0.04);
+		border: 8px solid rgba(255, 255, 255, 0.04);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -840,7 +976,7 @@
 		flex-direction: column;
 		width: 100%;
 		gap: 10px;
-		border-top: 1px solid rgba(255,255,255,0.05);
+		border-top: 1px solid rgba(255, 255, 255, 0.05);
 		padding-top: 15px;
 	}
 
@@ -859,9 +995,15 @@
 		font-family: monospace;
 	}
 
-	.cyan-text { color: var(--accent-cyan); }
-	.purple-text { color: var(--accent-purple); }
-	.gold-text { color: var(--accent-gold); }
+	.cyan-text {
+		color: var(--accent-cyan);
+	}
+	.purple-text {
+		color: var(--accent-purple);
+	}
+	.gold-text {
+		color: var(--accent-gold);
+	}
 
 	/* Terminal Console logs */
 	.console-logs-card {
@@ -870,12 +1012,12 @@
 
 	.terminal-wrapper {
 		background: #06070a;
-		border: 1px solid rgba(255,255,255,0.08);
+		border: 1px solid rgba(255, 255, 255, 0.08);
 		border-radius: 8px;
 		display: flex;
 		flex-direction: column;
 		height: 250px;
-		box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+		box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
 		overflow: hidden;
 	}
 
@@ -885,7 +1027,7 @@
 		display: flex;
 		align-items: center;
 		gap: 6px;
-		border-bottom: 1px solid rgba(255,255,255,0.05);
+		border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 	}
 
 	.window-dot {
@@ -894,9 +1036,15 @@
 		border-radius: 50%;
 	}
 
-	.window-dot.red { background-color: #ff5f56; }
-	.window-dot.yellow { background-color: #ffbd2e; }
-	.window-dot.green { background-color: #27c93f; }
+	.window-dot.red {
+		background-color: #ff5f56;
+	}
+	.window-dot.yellow {
+		background-color: #ffbd2e;
+	}
+	.window-dot.green {
+		background-color: #27c93f;
+	}
 
 	.terminal-title {
 		color: var(--text-muted);
@@ -942,25 +1090,49 @@
 		border-radius: 3px;
 		font-size: 0.75rem;
 	}
-	:global(.log-method.get) { background: rgba(0, 242, 254, 0.15); color: var(--accent-cyan); }
-	:global(.log-method.post) { background: rgba(79, 172, 254, 0.15); color: var(--accent-purple); }
-	:global(.log-method.put) { background: rgba(248, 173, 157, 0.15); color: var(--accent-gold); }
-	:global(.log-method.delete) { background: rgba(255, 75, 92, 0.15); color: var(--accent-red); }
+	:global(.log-method.get) {
+		background: rgba(0, 242, 254, 0.15);
+		color: var(--accent-cyan);
+	}
+	:global(.log-method.post) {
+		background: rgba(79, 172, 254, 0.15);
+		color: var(--accent-purple);
+	}
+	:global(.log-method.put) {
+		background: rgba(248, 173, 157, 0.15);
+		color: var(--accent-gold);
+	}
+	:global(.log-method.delete) {
+		background: rgba(255, 75, 92, 0.15);
+		color: var(--accent-red);
+	}
 
 	:global(.log-level) {
 		font-weight: bold;
 		text-transform: uppercase;
 	}
-	:global(.log-level.info) { color: #38bdf8; }
-	:global(.log-level.warn) { color: #fbbf24; }
-	:global(.log-level.error) { color: #f87171; }
+	:global(.log-level.info) {
+		color: #38bdf8;
+	}
+	:global(.log-level.warn) {
+		color: #fbbf24;
+	}
+	:global(.log-level.error) {
+		color: #f87171;
+	}
 
 	:global(.log-status) {
 		font-weight: bold;
 	}
-	:global(.log-status.success) { color: var(--accent-green); }
-	:global(.log-status.warning) { color: var(--accent-gold); }
-	:global(.log-status.danger) { color: var(--accent-red); }
+	:global(.log-status.success) {
+		color: var(--accent-green);
+	}
+	:global(.log-status.warning) {
+		color: var(--accent-gold);
+	}
+	:global(.log-status.danger) {
+		color: var(--accent-red);
+	}
 
 	:global(.log-url) {
 		color: #c084fc;
@@ -990,7 +1162,8 @@
 	}
 
 	@keyframes pulseGlowSuccess {
-		0%, 100% {
+		0%,
+		100% {
 			box-shadow: 0 0 5px rgba(56, 239, 125, 0.2);
 			opacity: 1;
 		}
@@ -1001,7 +1174,8 @@
 	}
 
 	@keyframes pulseGlowError {
-		0%, 100% {
+		0%,
+		100% {
 			box-shadow: 0 0 5px rgba(255, 75, 92, 0.2);
 			border-color: rgba(255, 75, 92, 0.2);
 			opacity: 1;

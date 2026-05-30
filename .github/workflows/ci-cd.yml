@@ -1,0 +1,154 @@
+name: Go Backend CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-verify:
+    name: Build & Verify Backend
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.26.3'
+
+    - name: Install swag CLI
+      run: |
+        go install github.com/swaggo/swag/cmd/swag@latest
+        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+    - name: Generate Swagger Docs
+      run: |
+        cd backend
+        swag init
+
+    - name: Install dependencies
+      run: |
+        cd backend
+        go mod tidy
+
+    - name: Build Backend (Linux amd64)
+      run: |
+        cd backend
+        GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -v -o meow-backend .
+
+    - name: Run & Verify on Runner
+      run: |
+        cd backend
+        # Tạo file .env giả định để chạy test
+        echo "PORT=8080" > .env
+        
+        # Khởi chạy ngầm ứng dụng trên runner để test tích hợp
+        ./meow-backend &
+        BACKEND_PID=$!
+        
+        # Chờ 3 giây để server khởi động hoàn toàn
+        sleep 3
+        
+        # Thực hiện kiểm tra Health Check
+        echo "Kiểm tra endpoint Health..."
+        curl -f http://localhost:8080/api/health || (echo "Lỗi: Server không phản hồi đúng!" && kill $BACKEND_PID && exit 1)
+        
+        # Tắt ứng dụng kiểm thử sau khi thành công
+        kill $BACKEND_PID
+        echo "Ứng dụng khởi chạy thử nghiệm thành công trên runner!"
+
+    # Lưu lại file binary đã build để dùng ở job deploy tiếp theo
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: meow-backend-binary
+        path: backend/meow-backend
+        retention-days: 1
+
+  deploy:
+    name: Deploy to VPS
+    needs: build-and-verify
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Download Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: meow-backend-binary
+        path: .
+
+    - name: Copy Binary to VPS via SCP
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        source: "meow-backend"
+        target: "/home/hungg562002/project/meow/backend"
+        overwrite: true
+
+    - name: Setup and Restart Systemd Service via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        script: |
+          mkdir -p /home/hungg562002/project/meow/backend
+          cd /home/hungg562002/project/meow/backend
+          
+          # Cấp quyền thực thi cho file binary mới vừa upload lên
+          chmod +x meow-backend
+          
+          # Tạo file .env nếu chưa có
+          if [ ! -f .env ]; then
+            echo "PORT=8080" > .env
+          fi
+
+          # DỌN DẸP TIẾN TRÌNH CŨ:
+          # Tắt bất kỳ tiến trình thủ công nào đang chiếm cổng 8080 (giúp giải phóng tài nguyên)
+          echo "Đang dọn dẹp các tiến trình cũ chiếm dụng cổng 8080..."
+          sudo fuser -k 8080/tcp || true
+          pkill -f meow-backend || true
+
+          # TỰ ĐỘNG CẤU HÌNH SYSTEMD SERVICE (Nếu chạy lần đầu tiên trên VPS):
+          if [ ! -f /etc/systemd/system/meow-backend.service ]; then
+            echo "Đang tạo mới file cấu hình Systemd Service..."
+            sudo bash -c 'cat <<EOF > /etc/systemd/system/meow-backend.service
+          [Unit]
+          Description=Meow Go Backend Service
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=hungg562002
+          WorkingDirectory=/home/hungg562002/project/meow/backend
+          ExecStart=/home/hungg562002/project/meow/backend/meow-backend
+          Restart=always
+          RestartSec=5
+          Environment=PORT=8080
+          StandardOutput=syslog
+          StandardError=syslog
+          SyslogIdentifier=meow-backend
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF'
+            
+            # Reload daemon để hệ thống nhận diện service mới
+            sudo systemctl daemon-reload
+            
+            # Kích hoạt chế độ tự động chạy dịch vụ khi VPS khởi động lại
+            sudo systemctl enable meow-backend
+          fi
+          
+          # KHỞI CHẠY/KHỞI ĐỘNG LẠI DỊCH VỤ QUA SYSTEMD:
+          echo "Khởi động lại dịch vụ meow-backend qua systemd..."
+          sudo systemctl restart meow-backend
+          
+          # Chờ 3 giây để hệ thống ổn định và kiểm tra trạng thái hoạt động
+          sleep 3
+          sudo systemctl status meow-backend --no-pager

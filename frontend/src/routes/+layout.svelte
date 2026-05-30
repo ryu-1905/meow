@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import favicon from '$lib/assets/favicon.svg';
 	import '../app.css';
 
@@ -18,7 +19,7 @@
 				<span class="logo-text gradient-text">Meow App</span>
 			</div>
 			<nav class="nav-links">
-				<a href="/" class="nav-link active">Dashboard</a>
+				<a href={resolve('/')} class="nav-link active">Dashboard</a>
 			</nav>
 		</div>
 	</header>
@@ -89,7 +90,8 @@
 		padding: 4px 0;
 	}
 
-	.nav-link.active, .nav-link:hover {
+	.nav-link.active,
+	.nav-link:hover {
 		color: var(--text-primary);
 	}
 
