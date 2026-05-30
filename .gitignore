@@ -1,0 +1,5 @@
+go.work*
+*.bat
+.agents/
+.codegraph/
+skills-lock.json
