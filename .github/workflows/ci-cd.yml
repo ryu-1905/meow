@@ -83,6 +83,9 @@ jobs:
         name: meow-backend-binary
         path: .
 
+    - name: Prepare Service File for Deploy
+      run: cp .github/workflows/meow-backend.service ./meow-backend.service
+
     - name: Stop Existing Service via SSH (Avoid Text file busy)
       uses: appleboy/ssh-action@v1.0.3
       with:
@@ -103,9 +106,7 @@ jobs:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
-        source: |
-          meow-backend
-          .github/workflows/meow-backend.service
+        source: "meow-backend,meow-backend.service"
         target: "/home/hungg562002/project/meow/backend"
         overwrite: true
 
@@ -129,7 +130,7 @@ jobs:
 
           # CẬP NHẬT CẤU HÌNH SYSTEMD SERVICE TỪ FILE TRUYỀN LÊN:
           echo "Đang cập nhật file cấu hình Systemd Service từ kho lưu trữ..."
-          sudo cp .github/workflows/meow-backend.service /etc/systemd/system/meow-backend.service
+          sudo cp meow-backend.service /etc/systemd/system/meow-backend.service
           
           # Thiết lập quyền 644 chuẩn cho file cấu hình hệ thống
           sudo chmod 644 /etc/systemd/system/meow-backend.service
