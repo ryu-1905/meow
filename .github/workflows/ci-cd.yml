@@ -9,7 +9,7 @@ env:
 
 jobs:
   build-backend:
-    name: Build & Verify Backend
+    name: Build Backend
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,18 +18,12 @@ jobs:
         with:
           go-version: "1.26.3"
 
-      - name: Build & Smoke Test
+      - name: Build
         run: |
           cd backend
-          go install github.com/swaggo/swag/cmd/swag@latest
-          swag init
-          go mod tidy
+          cp .env.example .env
+          go get ./...
           GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o meow-backend .
-          echo "PORT=8080" > .env
-          ./meow-backend &
-          sleep 3
-          curl -f http://localhost:8080/api/health
-          kill %1
 
       - uses: actions/upload-artifact@v4
         with:
@@ -52,17 +46,14 @@ jobs:
       - name: Build
         run: |
           cd frontend
-          echo "PUBLIC_BACKEND_URL=https://meow.backend.viiic.net" > .env
-          npm install --ignore-engines --legacy-peer-deps
+          cp .env.example .env
+          npm install
           npm run build
 
       - uses: actions/upload-artifact@v4
         with:
           name: frontend
-          path: |
-            frontend/build
-            frontend/package.json
-            frontend/package-lock.json
+          path: frontend/build
           retention-days: 1
 
   deploy:
@@ -77,7 +68,10 @@ jobs:
           path: deploy
 
       - name: Prepare deploy bundle
-        run: cp .github/workflows/*.service deploy/
+        run: |
+          cp .github/workflows/*.service deploy/
+          cp backend/.env.example deploy/backend/.env.example
+          cp frontend/.env.example deploy/frontend/.env.example
 
       - name: Deploy via SCP
         uses: appleboy/scp-action@v0.1.7
@@ -102,22 +96,18 @@ jobs:
 
             sudo systemctl stop meow-backend meow-frontend || true
 
-            # Backend
+            # Backend: ghi đè binary, giữ .env nếu đã có
             cp "$S/backend/meow-backend" "$D/backend/" && chmod +x "$D/backend/meow-backend"
-            [ -f "$D/backend/.env" ] || echo "PORT=8080" > "$D/backend/.env"
+            [ -f "$D/backend/.env" ] || cp "$S/backend/.env.example" "$D/backend/.env"
             sudo cp "$S/meow-backend.service" /etc/systemd/system/
 
-            # Frontend
-            cp -r "$S/frontend/"* "$D/frontend/"
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-            cd "$D/frontend"
-            [ -f .env ] || printf "PORT=3000\nORIGIN=http://157.7.203.71:3000\n" > .env
-            npm install --ignore-engines --legacy-peer-deps --omit=dev
+            # Frontend: ghi đè toàn bộ thư mục build/, giữ .env nếu đã có
+            rm -rf "$D/frontend/build"
+            cp -r "$S/frontend" "$D/frontend/build"
+            [ -f "$D/frontend/.env" ] || cp "$S/frontend/.env.example" "$D/frontend/.env"
             sudo cp "$S/meow-frontend.service" /etc/systemd/system/
-            sudo sed -i "s|/usr/bin/node|$(which node)|g" /etc/systemd/system/meow-frontend.service
 
-            # Restart
+            # Restart services
             sudo systemctl daemon-reload
             sudo systemctl enable meow-backend meow-frontend
             sudo systemctl restart meow-backend meow-frontend

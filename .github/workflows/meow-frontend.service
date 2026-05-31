@@ -8,7 +8,7 @@ User=hungg562002
 WorkingDirectory=/home/hungg562002/project/meow/frontend
 # Tự động nạp động các biến PORT, ORIGIN... từ file .env thực tế trên VPS
 EnvironmentFile=/home/hungg562002/project/meow/frontend/.env
-ExecStart=/usr/bin/node build
+ExecStart=/usr/bin/node /home/hungg562002/project/meow/frontend/build/index.js
 Restart=always
 RestartSec=5
 StandardOutput=syslog
