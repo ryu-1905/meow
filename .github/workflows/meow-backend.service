@@ -7,9 +7,9 @@ Type=simple
 User=hungg562002
 WorkingDirectory=/home/hungg562002/project/meow/backend
 ExecStart=/home/hungg562002/project/meow/backend/meow-backend
+EnvironmentFile=/home/hungg562002/project/meow/backend/.env
 Restart=always
 RestartSec=5
-Environment=PORT=8080
 StandardOutput=syslog
 StandardError=syslog
 SyslogIdentifier=meow-backend
