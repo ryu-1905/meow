@@ -23,7 +23,7 @@ jobs:
           swag init
           go mod tidy
           go build -o build/${{vars.BACKEND_ARTIFACT_NAME}} .
-          cp .env.example build/
+          cp .env.example build/.env.example
 
       - uses: actions/upload-artifact@v4
         with:
@@ -45,7 +45,7 @@ jobs:
           cp .env.example .env
           npm install
           npm run build
-          cp .env.example build/
+          cp .env.example build/.env.example
 
       - uses: actions/upload-artifact@v4
         with:
@@ -70,13 +70,14 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          path: deploy
+          path: temp-deploy
 
       - name: Prepare deploy bundle
         run: |
-          cp -r .github/workflows/${{vars.DAEMON_SERVICE_SETUP_DIR}} deploy/${{vars.DAEMON_SERVICE_SETUP_DIR}}
-          cp -r backend/build deploy/backend/build
-          cp -r frontend/build deploy/frontend/build
+          mkdir deploy
+          cp -r temp-deploy/.github/workflows/${{vars.DAEMON_SERVICE_SETUP_DIR}} deploy/${{vars.DAEMON_SERVICE_SETUP_DIR}}
+          cp -r temp-deploy/backend/build deploy/backend/build
+          cp -r temp-deploy/frontend/build deploy/frontend/build
 
       - name: Deploy via SCP
         uses: appleboy/scp-action@v0.1.7
