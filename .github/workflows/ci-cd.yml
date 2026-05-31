@@ -75,8 +75,8 @@ jobs:
       - name: Prepare deploy bundle
         run: |
           cp -r .github/workflows/${{vars.DAEMON_SERVICE_SETUP_DIR}} deploy/${{vars.DAEMON_SERVICE_SETUP_DIR}}
-          cp backend/build/ deploy/backend/build
-          cp frontend/build deploy/frontend/build
+          cp -r backend/build deploy/backend/build
+          cp -r frontend/build deploy/frontend/build
 
       - name: Deploy via SCP
         uses: appleboy/scp-action@v0.1.7
