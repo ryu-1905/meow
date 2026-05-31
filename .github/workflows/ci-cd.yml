@@ -4,9 +4,6 @@ on:
   push:
     branches: ["main"]
 
-env:
-  DEPLOY_DIR: /home/hungg562002/project/meow
-
 jobs:
   build-backend:
     name: Build Backend
@@ -16,20 +13,20 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.26.3"
+          go-version: "stable"
 
       - name: Build
         run: |
           cd backend
           cp .env.example .env
-          go get ./...
-          GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o meow-backend .
+          go mod tidy
+          go install github.com/swaggo/swag/cmd/swag@latest
+          swag init
+          go build -o ${{vars.BACKEND_ARTIFACT_NAME}} .
 
       - uses: actions/upload-artifact@v4
         with:
-          name: backend
-          path: backend/meow-backend
-          retention-days: 1
+          path: backend/${{vars.BACKEND_ARTIFACT_NAME}}
 
   build-frontend:
     name: Build Frontend
@@ -39,9 +36,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "24"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          node-version: "latest"
 
       - name: Build
         run: |
@@ -52,9 +47,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: frontend
           path: frontend/build
-          retention-days: 1
 
   deploy:
     name: Deploy to VPS
@@ -80,7 +73,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           source: "deploy/"
-          target: "/tmp/meow-deploy"
+          target: ${{vars.TEMP_DEPLOY_DIR}}
           overwrite: true
 
       - name: Setup & Restart Services
@@ -89,28 +82,28 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
+          script_stop: true
           script: |
-            set -e
-            D=${{ env.DEPLOY_DIR }}
-            S=/tmp/meow-deploy/deploy
+            D=${{ vars.DEPLOY_DIR }}
+            S=${{vars.TEMP_DEPLOY_DIR}}
 
-            sudo systemctl stop meow-backend meow-frontend || true
+            sudo systemctl stop ${{vars.BACKEND_ARTIFACT_NAME}} ${{vars.FRONTEND_ARTIFACT_NAME}} || true
 
             # Backend: ghi đè binary, giữ .env nếu đã có
-            cp "$S/backend/meow-backend" "$D/backend/" && chmod +x "$D/backend/meow-backend"
-            [ -f "$D/backend/.env" ] || cp "$S/backend/.env.example" "$D/backend/.env"
-            sudo cp "$S/meow-backend.service" /etc/systemd/system/
+            cp "${{vars.TEMP_DEPLOY_DIR}}/backend/${{vars.BACKEND_ARTIFACT_NAME}}" "${{ vars.DEPLOY_DIR }}/backend/" && chmod +x "${{ vars.DEPLOY_DIR }}/backend/${{vars.BACKEND_ARTIFACT_NAME}}"
+            cp -n "${{vars.TEMP_DEPLOY_DIR}}/backend/.env.example" "${{ vars.DEPLOY_DIR }}/backend/.env"
+            sudo cp "${{vars.TEMP_DEPLOY_DIR}}/backend/${{vars.BACKEND_ARTIFACT_NAME}}.service" /etc/systemd/system/
 
             # Frontend: ghi đè toàn bộ thư mục build/, giữ .env nếu đã có
-            rm -rf "$D/frontend/build"
-            cp -r "$S/frontend" "$D/frontend/build"
-            [ -f "$D/frontend/.env" ] || cp "$S/frontend/.env.example" "$D/frontend/.env"
-            sudo cp "$S/meow-frontend.service" /etc/systemd/system/
+            rm -r "${{ vars.DEPLOY_DIR }}/frontend/build"
+            cp -r "${{vars.TEMP_DEPLOY_DIR}}/frontend/build" "${{ vars.DEPLOY_DIR }}/frontend/build"
+            cp -n "${{vars.TEMP_DEPLOY_DIR}}/frontend/.env.example" "${{ vars.DEPLOY_DIR }}/frontend/.env"
+            sudo cp "${{vars.TEMP_DEPLOY_DIR}}/frontend/${{vars.FRONTEND_ARTIFACT_NAME}}.service" /etc/systemd/system/
 
             # Restart services
             sudo systemctl daemon-reload
-            sudo systemctl enable meow-backend meow-frontend
-            sudo systemctl restart meow-backend meow-frontend
+            sudo systemctl enable ${{vars.BACKEND_ARTIFACT_NAME}} ${{vars.FRONTEND_ARTIFACT_NAME}}
+            sudo systemctl restart ${{vars.BACKEND_ARTIFACT_NAME}} ${{vars.FRONTEND_ARTIFACT_NAME}}
             sleep 3
-            sudo systemctl status meow-backend meow-frontend --no-pager
-            rm -rf /tmp/meow-deploy
+            sudo systemctl status ${{vars.BACKEND_ARTIFACT_NAME}} ${{vars.FRONTEND_ARTIFACT_NAME}} --no-pager
+            rm -rf ${{vars.TEMP_DEPLOY_DIR}}
