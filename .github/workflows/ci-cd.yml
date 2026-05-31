@@ -5,112 +5,30 @@ on:
     branches: ["main"]
 
 jobs:
-  build-backend:
-    name: Build Backend
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "stable"
-
-      - name: Build
-        run: |
-          cd backend
-          cp .env.example .env
-          go install github.com/swaggo/swag/cmd/swag@latest
-          swag init
-          go mod tidy
-          go build -o build/${{vars.BACKEND_ARTIFACT_NAME}} .
-          mv .env.example build/.env.example
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: backend
-          path: backend/build
-
-  build-frontend:
-    name: Build Frontend
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "latest"
-
-      - name: Build
-        run: |
-          cd frontend
-          cp .env.example .env
-          npm install
-          npm run build
-          mkdir artifacts
-          mv .env.example artifacts/.env.example
-          mv build artifacts/build
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: frontend
-          path: frontend/artifacts
-
-  build-daemon-file:
-    needs: [build-backend, build-frontend]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{vars.DAEMON_SERVICE_SETUP_DIR}}
-          path: .github/workflows/${{vars.DAEMON_SERVICE_SETUP_DIR}}
-
   deploy:
-    name: Deploy to VPS
-    needs: [build-backend, build-frontend, build-daemon-file]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/download-artifact@v4
-        with:
-          path: deploy
-
-      - name: Deploy via SCP
-        uses: appleboy/scp-action@v0.1.7
+      - uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: "deploy"
-          target: ${{vars.TEMP_DEPLOY_DIR}}
-          overwrite: true
-
-      - name: Setup & Restart Services
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script_stop: true
           script: |
             sudo systemctl stop ${{vars.BACKEND_ARTIFACT_NAME}} ${{vars.FRONTEND_ARTIFACT_NAME}} || true
-
-            # Backend: ghi đè binary, giữ .env nếu đã có
-            cp "${{vars.TEMP_DEPLOY_DIR}}/backend/${{vars.BACKEND_ARTIFACT_NAME}}" "${{ vars.DEPLOY_DIR }}/backend/${{vars.BACKEND_ARTIFACT_NAME}}" && chmod +x "${{ vars.DEPLOY_DIR }}/backend/${{vars.BACKEND_ARTIFACT_NAME}}"
-            cp -n "${{vars.TEMP_DEPLOY_DIR}}/backend/.env.example" "${{ vars.DEPLOY_DIR }}/backend/.env"
-            sudo cp "${{vars.TEMP_DEPLOY_DIR}}/${{vars.DAEMON_SERVICE_SETUP_DIR}}/${{vars.BACKEND_ARTIFACT_NAME}}.service" /etc/systemd/system/
-
-            # Frontend: ghi đè toàn bộ thư mục build/, giữ .env nếu đã có
-            cp -r "${{vars.TEMP_DEPLOY_DIR}}/frontend/artifacts/build" "${{ vars.DEPLOY_DIR }}/frontend/"
-            cp -n "${{vars.TEMP_DEPLOY_DIR}}/frontend/artifacts/.env.example" "${{ vars.DEPLOY_DIR }}/frontend/.env"
-            sudo cp "${{vars.TEMP_DEPLOY_DIR}}/${{vars.DAEMON_SERVICE_SETUP_DIR}}/${{vars.FRONTEND_ARTIFACT_NAME}}.service" /etc/systemd/system/
-
-            # Restart services
-            sudo systemctl daemon-reload
-            sudo systemctl enable ${{vars.BACKEND_ARTIFACT_NAME}} ${{vars.FRONTEND_ARTIFACT_NAME}}
-            sudo systemctl restart ${{vars.BACKEND_ARTIFACT_NAME}} ${{vars.FRONTEND_ARTIFACT_NAME}}
-            sleep 3
-            sudo systemctl status ${{vars.BACKEND_ARTIFACT_NAME}} ${{vars.FRONTEND_ARTIFACT_NAME}} --no-pager
-            # rm -rf ${{vars.TEMP_DEPLOY_DIR}}
+            cd ${{vars.DEPLOY_DIR}}
+            git pull
+            cd backend
+            go get .
+            swag init
+            go mod tidy
+            go build -o build/meow-backend
+            sudo systemctl enable meow-backend
+            sudo systemctl restart meow-backend
+            cd ../
+            cd frontend
+            npm ci
+            npm run build
+            sudo systemctl enable meow-frontend
+            sudo systemctl restart meow-frontend
