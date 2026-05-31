@@ -22,11 +22,12 @@ jobs:
           go install github.com/swaggo/swag/cmd/swag@latest
           swag init
           go mod tidy
-          go build -o ${{vars.BACKEND_ARTIFACT_NAME}} .
+          go build -o build/${{vars.BACKEND_ARTIFACT_NAME}} .
+          cp .env.example build/
 
       - uses: actions/upload-artifact@v4
         with:
-          path: backend/${{vars.BACKEND_ARTIFACT_NAME}}
+          path: backend/build
 
   build-frontend:
     name: Build Frontend
@@ -44,14 +45,25 @@ jobs:
           cp .env.example .env
           npm install
           npm run build
+          cp .env.example build/
 
       - uses: actions/upload-artifact@v4
         with:
           path: frontend/build
 
+  build-daemon-file:
+    needs: [build-backend, build-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/upload-artifact@v4
+        with:
+          path: .github/workflows/${{vars.DAEMON_SERVICE_SETUP_DIR}}
+
   deploy:
     name: Deploy to VPS
-    needs: [build-backend, build-frontend]
+    needs: [build-backend, build-frontend, build-daemon-file]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -62,9 +74,9 @@ jobs:
 
       - name: Prepare deploy bundle
         run: |
-          cp .github/workflows/*.service deploy/
-          cp backend/.env.example deploy/backend/.env.example
-          cp frontend/.env.example deploy/frontend/.env.example
+          cp .github/workflows/${{vars.DAEMON_SERVICE_SETUP_DIR}} deploy/${{vars.DAEMON_SERVICE_SETUP_DIR}}
+          cp backend/build/ deploy/backend/build
+          cp frontend/build deploy/frontend/build
 
       - name: Deploy via SCP
         uses: appleboy/scp-action@v0.1.7
@@ -84,21 +96,17 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script_stop: true
           script: |
-            D=${{ vars.DEPLOY_DIR }}
-            S=${{vars.TEMP_DEPLOY_DIR}}
-
             sudo systemctl stop ${{vars.BACKEND_ARTIFACT_NAME}} ${{vars.FRONTEND_ARTIFACT_NAME}} || true
 
             # Backend: ghi đè binary, giữ .env nếu đã có
-            cp "${{vars.TEMP_DEPLOY_DIR}}/backend/${{vars.BACKEND_ARTIFACT_NAME}}" "${{ vars.DEPLOY_DIR }}/backend/" && chmod +x "${{ vars.DEPLOY_DIR }}/backend/${{vars.BACKEND_ARTIFACT_NAME}}"
-            cp -n "${{vars.TEMP_DEPLOY_DIR}}/backend/.env.example" "${{ vars.DEPLOY_DIR }}/backend/.env"
-            sudo cp "${{vars.TEMP_DEPLOY_DIR}}/backend/${{vars.BACKEND_ARTIFACT_NAME}}.service" /etc/systemd/system/
+            cp "${{vars.TEMP_DEPLOY_DIR}}/backend/build/${{vars.BACKEND_ARTIFACT_NAME}}" "${{ vars.DEPLOY_DIR }}/backend/${{vars.BACKEND_ARTIFACT_NAME}}" && chmod +x "${{ vars.DEPLOY_DIR }}/backend/${{vars.BACKEND_ARTIFACT_NAME}}"
+            cp -n "${{vars.TEMP_DEPLOY_DIR}}/backend/build/.env.example" "${{ vars.DEPLOY_DIR }}/backend/.env"
+            sudo cp "${{vars.TEMP_DEPLOY_DIR}}/${{vars.DAEMON_SERVICE_SETUP_DIR}}/${{vars.BACKEND_ARTIFACT_NAME}}.service" /etc/systemd/system/
 
             # Frontend: ghi đè toàn bộ thư mục build/, giữ .env nếu đã có
-            rm -r "${{ vars.DEPLOY_DIR }}/frontend/build"
-            cp -r "${{vars.TEMP_DEPLOY_DIR}}/frontend/build" "${{ vars.DEPLOY_DIR }}/frontend/build"
-            cp -n "${{vars.TEMP_DEPLOY_DIR}}/frontend/.env.example" "${{ vars.DEPLOY_DIR }}/frontend/.env"
-            sudo cp "${{vars.TEMP_DEPLOY_DIR}}/frontend/${{vars.FRONTEND_ARTIFACT_NAME}}.service" /etc/systemd/system/
+            cp -r "${{vars.TEMP_DEPLOY_DIR}}/frontend/build/*" "${{ vars.DEPLOY_DIR }}/frontend/"
+            cp -n "${{vars.TEMP_DEPLOY_DIR}}/frontend/build/.env.example" "${{ vars.DEPLOY_DIR }}/frontend/build/.env"
+            sudo cp "${{vars.TEMP_DEPLOY_DIR}}/${{vars.DAEMON_SERVICE_SETUP_DIR}}/${{vars.FRONTEND_ARTIFACT_NAME}}.service" /etc/systemd/system/
 
             # Restart services
             sudo systemctl daemon-reload
