@@ -24,11 +24,10 @@ jobs:
             swag init
             go mod tidy
             go build -o build/meow-backend
-            sudo systemctl enable meow-backend
-            sudo systemctl restart meow-backend
             cd ../
             cd frontend
-            npm ci
+            npm i
             npm run build
-            sudo systemctl enable meow-frontend
-            sudo systemctl restart meow-frontend
+            sudo systemctl enable ${{vars.BACKEND_ARTIFACT_NAME}} ${{vars.FRONTEND_ARTIFACT_NAME}}
+            sudo systemctl restart ${{vars.BACKEND_ARTIFACT_NAME}} ${{vars.FRONTEND_ARTIFACT_NAME}}
+            sudo systemctl reload caddy
