@@ -113,4 +113,4 @@ jobs:
             sudo systemctl restart ${{vars.BACKEND_ARTIFACT_NAME}} ${{vars.FRONTEND_ARTIFACT_NAME}}
             sleep 3
             sudo systemctl status ${{vars.BACKEND_ARTIFACT_NAME}} ${{vars.FRONTEND_ARTIFACT_NAME}} --no-pager
-            rm -rf ${{vars.TEMP_DEPLOY_DIR}}
+            # rm -rf ${{vars.TEMP_DEPLOY_DIR}}
