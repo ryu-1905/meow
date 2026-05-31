@@ -238,7 +238,7 @@ jobs:
             cd /home/hungg562002/project/meow/frontend
 
             # Dọn dẹp cấu trúc thư mục từ scp (đưa file trong frontend-deploy/ ra ngoài)
-            cp -r frontend-deploy/frontend/* ./ || true
+            cp -r frontend-deploy/* ./ || true
             rm -rf frontend-deploy || true
 
             # Cài đặt thư viện production Node.js bằng tệp thực thi NPM đã tìm thấy
