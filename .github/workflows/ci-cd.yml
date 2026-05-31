@@ -74,7 +74,7 @@ jobs:
 
       - name: Prepare deploy bundle
         run: |
-          cp .github/workflows/${{vars.DAEMON_SERVICE_SETUP_DIR}} deploy/${{vars.DAEMON_SERVICE_SETUP_DIR}}
+          cp -r .github/workflows/${{vars.DAEMON_SERVICE_SETUP_DIR}} deploy/${{vars.DAEMON_SERVICE_SETUP_DIR}}
           cp backend/build/ deploy/backend/build
           cp frontend/build deploy/frontend/build
 
