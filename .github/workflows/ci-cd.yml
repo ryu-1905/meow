@@ -21,7 +21,7 @@ jobs:
             git pull
             cd backend
             rm -rf build/* || true
-            go get .
+            go mod download
             swag init
             go mod tidy
             go build -o build/${{vars.BACKEND_ARTIFACT_NAME}}
