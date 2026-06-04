@@ -41,9 +41,9 @@
 	}
 
 	.app-header {
-		background: rgba(10, 11, 16, 0.6);
-		backdrop-filter: blur(12px);
-		-webkit-backdrop-filter: blur(12px);
+		background: rgba(6, 7, 11, 0.7);
+		backdrop-filter: blur(16px);
+		-webkit-backdrop-filter: blur(16px);
 		border-bottom: 1px solid var(--glass-border);
 		position: sticky;
 		top: 0;
@@ -57,6 +57,7 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		transition: var(--transition-smooth);
 	}
 
 	.logo {
@@ -112,17 +113,35 @@
 		max-width: 1200px;
 		margin: 0 auto;
 		padding: 40px 24px;
+		transition: var(--transition-smooth);
 	}
 
 	.app-footer {
 		text-align: center;
 		padding: 24px;
 		border-top: 1px solid var(--glass-border);
-		background: rgba(10, 11, 16, 0.4);
+		background: rgba(6, 7, 11, 0.5);
 	}
 
 	.footer-text {
 		color: var(--text-muted);
 		font-size: 0.85rem;
+	}
+
+	/* Responsive Header cho Mobile */
+	@media (max-width: 640px) {
+		.header-content {
+			flex-direction: column;
+			gap: 16px;
+			padding: 16px;
+		}
+
+		.nav-links {
+			gap: 16px;
+		}
+
+		.main-content {
+			padding: 20px 16px;
+		}
 	}
 </style>

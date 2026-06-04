@@ -12,6 +12,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"github.com/ryu-1905/meow/controllers"
+	"github.com/ryu-1905/meow/database"
 	_ "github.com/ryu-1905/meow/docs"
 	"github.com/ryu-1905/meow/services"
 )
@@ -39,13 +40,26 @@ func main() {
 		log.Println("No .env file found, using default environment variables")
 	}
 
+	// Đọc DATABASE_URL từ environment variables
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		log.Fatal("DATABASE_URL environment variable is not set")
+	}
+
+	// Khởi tạo database connection pool
+	dbPool, err := database.InitDB(dbURL)
+	if err != nil {
+		log.Fatalf("Không thể khởi tạo cơ sở dữ liệu: %v", err)
+	}
+	defer dbPool.Close()
+
 	r := gin.Default()
 
 	// Sử dụng middleware CORS chính thức của Gin để cho phép frontend Svelte kết nối an toàn
 	r.Use(cors.Default())
 
-	// Khởi tạo các services và controllers
-	healthService := services.NewHealthService()
+	// Khởi tạo các services và controllers với database pool
+	healthService := services.NewHealthService(dbPool)
 	healthController := controllers.NewHealthController(healthService)
 
 	// API Routes

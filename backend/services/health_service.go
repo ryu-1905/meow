@@ -2,10 +2,13 @@ package services
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"runtime"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // ServerInfo chứa thông tin cấu hình và tài nguyên của server
@@ -34,11 +37,26 @@ func init() {
 }
 
 // HealthService quản lý logic nghiệp vụ kiểm tra trạng thái hệ thống
-type HealthService struct{}
+type HealthService struct {
+	dbPool *pgxpool.Pool
+}
 
 // NewHealthService khởi tạo một instance mới của HealthService
-func NewHealthService() *HealthService {
-	return &HealthService{}
+func NewHealthService(dbPool *pgxpool.Pool) *HealthService {
+	return &HealthService{
+		dbPool: dbPool,
+	}
+}
+
+// CheckDatabase kiểm tra xem kết nối tới database có hoạt động hay không
+func (s *HealthService) CheckDatabase(ctx context.Context) string {
+	if s.dbPool == nil {
+		return "DISCONNECTED"
+	}
+	if err := s.dbPool.Ping(ctx); err != nil {
+		return "DISCONNECTED (Ping error: " + err.Error() + ")"
+	}
+	return "CONNECTED"
 }
 
 // GetServerInfo thu thập thông số chi tiết của hệ thống và runtime Go

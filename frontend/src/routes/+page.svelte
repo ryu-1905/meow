@@ -21,6 +21,7 @@
 
 	interface HealthResponse {
 		status: string;
+		database_status: string;
 		server_info: ServerInfo;
 		app_logs: string[];
 	}
@@ -315,7 +316,7 @@
 							</div>
 
 							<!-- Uptime -->
-							<div class="stat-item full-width">
+							<div class="stat-item">
 								<div class="stat-icon-wrapper accent">
 									<svg viewBox="0 0 24 24" width="20" height="20">
 										<path
@@ -327,6 +328,24 @@
 								<div class="stat-info">
 									<span class="stat-label">Thời gian đã chạy (Uptime)</span>
 									<span class="stat-value font-mono">{healthData.server_info.uptime}</span>
+								</div>
+							</div>
+
+							<!-- Cơ sở dữ liệu -->
+							<div class="stat-item">
+								<div class="stat-icon-wrapper {healthData.database_status === 'CONNECTED' ? 'green' : 'red'}">
+									<svg viewBox="0 0 24 24" width="20" height="20">
+										<path
+											fill="currentColor"
+											d="M12 2C7.58 2 4 3.79 4 6v12c0 2.21 3.58 4 8 4s8-1.79 8-4V6c0-2.21-3.58-4-8-4zm0 2c3.87 0 6 1.34 6 2s-2.13 2-6 2s-6-1.34-6-2s2.13-2 6-2zm0 14c-3.87 0-6-1.34-6-2v-2.56c1.47.88 3.55 1.56 6 1.56s4.53-.68 6-1.56V16c0 .66-2.13 2-6 2zm0-5c-3.87 0-6-1.34-6-2V8.44c1.47.88 3.55 1.56 6 1.56s4.53-.68 6-1.56V11c0 .66-2.13 2-6 2z"
+										/>
+									</svg>
+								</div>
+								<div class="stat-info">
+									<span class="stat-label">Cơ sở dữ liệu (Postgres)</span>
+									<span class="stat-value {healthData.database_status === 'CONNECTED' ? 'green-text' : 'red-text'}">
+										{healthData.database_status}
+									</span>
 								</div>
 							</div>
 						</div>
@@ -592,7 +611,8 @@
 		gap: 30px;
 		max-width: 1200px;
 		margin: 0 auto;
-		padding: 10px;
+		padding: 20px;
+		transition: var(--transition-smooth);
 	}
 
 	.hero-section {
@@ -615,17 +635,20 @@
 		font-weight: 800;
 		font-size: 2.8rem;
 		letter-spacing: -0.03em;
+		transition: var(--transition-smooth);
 	}
 
 	.dashboard-subtitle {
 		color: var(--text-secondary);
 		font-size: 1.1rem;
+		transition: var(--transition-smooth);
 	}
 
 	.dashboard-grid {
 		display: grid;
 		grid-template-columns: 1.1fr 0.9fr;
 		gap: 25px;
+		transition: var(--transition-smooth);
 	}
 
 	.col-left,
@@ -635,12 +658,51 @@
 		gap: 25px;
 	}
 
-	@media (max-width: 950px) {
+	/* Responsive Tablet & Mobile */
+	@media (max-width: 1024px) {
+		.dashboard {
+			padding: 16px;
+			gap: 20px;
+		}
+		.dashboard-grid {
+			gap: 20px;
+		}
+		.glass-card {
+			padding: 20px;
+		}
+	}
+
+	@media (max-width: 768px) {
 		.dashboard-grid {
 			grid-template-columns: 1fr;
 		}
 		.dashboard-title {
-			font-size: 2.2rem;
+			font-size: 2rem;
+		}
+		.dashboard-subtitle {
+			font-size: 0.95rem;
+		}
+		.col-left,
+		.col-right {
+			gap: 20px;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.dashboard {
+			padding: 12px;
+		}
+		.dashboard-title {
+			font-size: 1.8rem;
+		}
+		.glass-card {
+			padding: 16px;
+		}
+		.card-title-with-icon {
+			font-size: 1.15rem;
+		}
+		.terminal-wrapper {
+			height: 200px;
 		}
 	}
 
@@ -762,16 +824,9 @@
 		transform: translateY(-2px);
 	}
 
-	.stat-item.full-width {
-		grid-column: span 2;
-	}
-
-	@media (max-width: 500px) {
+	@media (max-width: 600px) {
 		.mini-stats-grid {
 			grid-template-columns: 1fr;
-		}
-		.stat-item.full-width {
-			grid-column: span 1;
 		}
 	}
 
@@ -1185,5 +1240,18 @@
 			border-color: rgba(255, 75, 92, 0.5);
 			opacity: 0.85;
 		}
+	}
+
+	.stat-icon-wrapper.red {
+		background: rgba(255, 75, 92, 0.1);
+		color: var(--accent-red);
+	}
+
+	.green-text {
+		color: var(--accent-green) !important;
+	}
+
+	.red-text {
+		color: var(--accent-red) !important;
 	}
 </style>

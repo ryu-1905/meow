@@ -2,9 +2,9 @@
 
 :root {
 	/* Color Palette - Dark Premium Theme */
-	--bg-primary: #0a0b10;
-	--bg-secondary: #121420;
-	--bg-tertiary: #1a1d30;
+	--bg-primary: #06070b;
+	--bg-secondary: #0b0d16;
+	--bg-tertiary: #121422;
 
 	--accent-cyan: #00f2fe;
 	--accent-purple: #4facfe;
@@ -17,15 +17,15 @@
 	--text-muted: #6c7289;
 
 	/* Glassmorphism settings */
-	--glass-bg: rgba(18, 20, 32, 0.7);
-	--glass-border: rgba(255, 255, 255, 0.08);
-	--glass-glow: rgba(79, 172, 254, 0.15);
+	--glass-bg: rgba(11, 13, 22, 0.65);
+	--glass-border: rgba(255, 255, 255, 0.05);
+	--glass-glow: rgba(0, 242, 254, 0.1);
 
 	/* Shadows & Radius */
-	--shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-	--shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-	--shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-	--shadow-glow: 0 0 20px rgba(0, 242, 254, 0.2);
+	--shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
+	--shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+	--shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+	--shadow-glow: 0 0 20px rgba(0, 242, 254, 0.15);
 
 	--radius-sm: 8px;
 	--radius-md: 16px;
@@ -36,23 +36,6 @@
 
 	--transition-smooth: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 	--transition-fast: all 0.2s ease;
-}
-
-/* Light Theme overrides (Optional, standard fallback) */
-@media (prefers-color-scheme: light) {
-	:root {
-		--bg-primary: #f4f6fa;
-		--bg-secondary: #ffffff;
-		--bg-tertiary: #f0f2f7;
-
-		--text-primary: #121420;
-		--text-secondary: #4a4e69;
-		--text-muted: #9a9fac;
-
-		--glass-bg: rgba(255, 255, 255, 0.8);
-		--glass-border: rgba(0, 0, 0, 0.06);
-		--glass-glow: rgba(79, 172, 254, 0.05);
-	}
 }
 
 * {
@@ -69,8 +52,11 @@ body {
 	overflow-x: hidden;
 	line-height: 1.6;
 	background-image:
-		radial-gradient(circle at 10% 20%, rgba(79, 172, 254, 0.05) 0%, transparent 40%),
-		radial-gradient(circle at 90% 80%, rgba(0, 242, 254, 0.05) 0%, transparent 40%);
+		linear-gradient(rgba(255, 255, 255, 0.007) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(255, 255, 255, 0.007) 1px, transparent 1px),
+		radial-gradient(circle at 15% 15%, rgba(0, 242, 254, 0.08) 0%, transparent 45%),
+		radial-gradient(circle at 85% 85%, rgba(79, 172, 254, 0.08) 0%, transparent 45%);
+	background-size: 30px 30px, 30px 30px, auto, auto;
 	background-attachment: fixed;
 }
 
