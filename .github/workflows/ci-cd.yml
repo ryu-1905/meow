@@ -20,12 +20,14 @@ jobs:
             cd ${{vars.DEPLOY_DIR}}
             git pull
             cd backend
+            rm -rf build/* || true
             go get .
             swag init
             go mod tidy
-            go build -o build/meow-backend
+            go build -o build/${{vars.BACKEND_ARTIFACT_NAME}}
             cd ../
             cd frontend
+            rm -rf build/* || true
             npm i
             npm run build
             sudo systemctl enable ${{vars.BACKEND_ARTIFACT_NAME}} ${{vars.FRONTEND_ARTIFACT_NAME}}
