@@ -20,8 +20,7 @@ import (
 // @title Meow API
 // @version 1.0
 // @description This is the backend API for Meow application.
-
-// @host localhost:8080
+// @schemes http https
 // @BasePath /api
 
 func main() {
