@@ -25,7 +25,7 @@ jobs:
             swag init
             go mod tidy
             go build -o build/${{vars.BACKEND_ARTIFACT_NAME}}
-            cd ../
+            ccd ${{vars.DEPLOY_DIR}}
             cd frontend
             rm -rf build/* || true
             npm i
