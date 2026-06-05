@@ -19,14 +19,13 @@ jobs:
             sudo systemctl stop ${{vars.BACKEND_ARTIFACT_NAME}} ${{vars.FRONTEND_ARTIFACT_NAME}} || true
             cd ${{vars.DEPLOY_DIR}}
             git pull
-            cd backend
+            cd ${{vars.DEPLOY_DIR}}/backend
             rm -rf build/* || true
             go mod download
             swag init
             go mod tidy
             go build -o build/${{vars.BACKEND_ARTIFACT_NAME}}
-            ccd ${{vars.DEPLOY_DIR}}
-            cd frontend
+            cd ${{vars.DEPLOY_DIR}}/frontend
             rm -rf build/* || true
             npm i
             npm run build
