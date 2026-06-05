@@ -16,6 +16,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
+            export PATH=$PATH:/usr/local/go/bin:/home/${{secrets.SSH_USER}}/go/bin || true
             sudo systemctl stop ${{vars.BACKEND_ARTIFACT_NAME}} ${{vars.FRONTEND_ARTIFACT_NAME}} || true
             cd ${{vars.DEPLOY_DIR}}
             git pull
