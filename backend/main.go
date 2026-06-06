@@ -20,7 +20,7 @@ import (
 // @title Meow API
 // @version 1.0
 // @description This is the backend API for Meow application.
-// @schemes http https
+// @schemes https http
 // @BasePath /api
 
 func main() {
