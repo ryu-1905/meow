@@ -23,9 +23,6 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            # Set PATH to include Go bin directory
-            export PATH=$PATH:/usr/local/go/bin:/home/${{ secrets.SSH_USER }}/go/bin || true
-
             echo "Stopping systemd services..."
             sudo systemctl stop ${{ vars.BACKEND_ARTIFACT_NAME }} ${{ vars.FRONTEND_ARTIFACT_NAME }} || true
 
