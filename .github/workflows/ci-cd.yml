@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   deploy:
@@ -16,17 +17,46 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4.1.7
 
-      - name: Execute Remote Deployment Commands via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
+      - name: Execute Remote Deployment via Native SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Checking if secrets are set..."
+          if [ -z "$SSH_HOST" ] || [ -z "$SSH_USER" ] || [ -z "$SSH_KEY" ]; then
+            echo "Error: One or more SSH secrets are missing!" > ssh_deploy.log
+            exit 1
+          fi
+
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+          echo "Starting deployment via SSH..."
+          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes -o ConnectTimeout=15 "$SSH_USER@$SSH_HOST" << 'EOF' > ssh_deploy.log 2>&1 || {
+            SSH_EXIT_CODE=$?
+            echo "Deployment failed with exit code $SSH_EXIT_CODE" >> ssh_deploy.log
+            cat ssh_deploy.log
+            
+            # Create JSON payload using jq to prevent syntax/escaping errors
+            jq -n --arg body "$(cat ssh_deploy.log)" \
+                  --arg title "[CI/CD Failure] Run $GITHUB_RUN_NUMBER - Commit $GITHUB_SHA" \
+                  '{title: $title, body: ("Lỗi deploy qua SSH. Chi tiết log bên dưới:\n\n```\n" + $body + "\n```")}' > issue_payload.json
+            
+            curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" \
+                 -H "Accept: application/vnd.github.v3+json" \
+                 -H "Content-Type: application/json" \
+                 https://api.github.com/repos/ryu-1905/meow/issues \
+                 -d @issue_payload.json
+            
+            exit $SSH_EXIT_CODE
+          }
             {
               set -e
-              # Set PATH to include Go bin directory
-              export PATH=$PATH:/usr/local/go/bin:/home/${{ secrets.SSH_USER }}/go/bin || true
+              export PATH=$PATH:/usr/local/go/bin:/home/hungg562002/go/bin || true
 
               echo "Stopping systemd services..."
               sudo systemctl stop meow-backend meow-frontend || true
@@ -60,4 +90,8 @@ jobs:
               sudo systemctl reload caddy
 
               echo "Deployment finished successfully!"
-            } > /tmp/deploy_action.log 2>&1
+            }
+          EOF
+
+          cat ssh_deploy.log
+          echo "Deployment succeeded!"
