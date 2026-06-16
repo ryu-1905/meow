@@ -2,8 +2,11 @@
 .claude/
 .agents/
 .codegraph/
+go.work.sum
 
 # Agent Files
 AGENTS.md
 CLAUDE.md
 GEMINI.md
+
+deploy_url.md
