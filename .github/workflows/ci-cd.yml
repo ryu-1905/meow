@@ -1,4 +1,5 @@
 name: Meow Fullstack CI/CD
+# Trigger run after configuring passwordless sudo on SSH server
 
 on:
   push:
