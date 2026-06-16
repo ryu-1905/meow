@@ -1,5 +1,9 @@
-go.work*
 *.bat
+.claude/
 .agents/
 .codegraph/
-skills-lock.json
+
+# Agent Files
+AGENTS.md
+CLAUDE.md
+GEMINI.md

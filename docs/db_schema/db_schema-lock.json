@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "tables": {
+    "users": {
+      "path": "docs/db_schema/users_table.md",
+      "description": "Bảng lưu trữ thông tin tài khoản người dùng, băm mật khẩu và thời gian khởi tạo/cập nhật."
+    }
+  }
+}

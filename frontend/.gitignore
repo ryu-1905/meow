@@ -24,3 +24,5 @@ vite.config.ts.timestamp-*
 
 # Agent Internals
 .agents/
+
+package-lock.json

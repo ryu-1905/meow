@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
 	import favicon from '$lib/assets/favicon.svg';
 	import '../app.css';
+	import { auth } from '$lib/auth.svelte';
+	import AuthForm from '$lib/components/AuthForm.svelte';
+	import Header from '$lib/components/Header.svelte';
 
 	let { children } = $props();
 </script>
@@ -12,25 +14,19 @@
 </svelte:head>
 
 <div class="app-container">
-	<header class="app-header">
-		<div class="header-content">
-			<div class="logo">
-				<span class="logo-emoji">🐱</span>
-				<span class="logo-text gradient-text">Meow App</span>
-			</div>
-			<nav class="nav-links">
-				<a href={resolve('/')} class="nav-link active">Dashboard</a>
-			</nav>
-		</div>
-	</header>
+	{#if auth.isAuthenticated}
+		<Header />
 
-	<main class="main-content">
-		{@render children()}
-	</main>
+		<main class="main-content">
+			{@render children()}
+		</main>
 
-	<footer class="app-footer">
-		<p class="footer-text">Built with 💖 using Svelte 5, Go, & Antigravity IDE</p>
-	</footer>
+		<footer class="app-footer">
+			<p class="footer-text">Built with 💖 using Svelte 5, Go, & Antigravity IDE</p>
+		</footer>
+	{:else}
+		<AuthForm />
+	{/if}
 </div>
 
 <style>
@@ -38,73 +34,6 @@
 		display: flex;
 		flex-direction: column;
 		min-height: 100vh;
-	}
-
-	.app-header {
-		background: rgba(6, 7, 11, 0.7);
-		backdrop-filter: blur(16px);
-		-webkit-backdrop-filter: blur(16px);
-		border-bottom: 1px solid var(--glass-border);
-		position: sticky;
-		top: 0;
-		z-index: 100;
-	}
-
-	.header-content {
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 16px 24px;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		transition: var(--transition-smooth);
-	}
-
-	.logo {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-	}
-
-	.logo-emoji {
-		font-size: 1.8rem;
-		animation: float 4s ease-in-out infinite;
-	}
-
-	.logo-text {
-		font-family: var(--font-display);
-		font-weight: 800;
-		font-size: 1.4rem;
-		letter-spacing: -0.02em;
-	}
-
-	.nav-links {
-		display: flex;
-		gap: 24px;
-	}
-
-	.nav-link {
-		color: var(--text-secondary);
-		font-weight: 500;
-		font-size: 0.95rem;
-		position: relative;
-		padding: 4px 0;
-	}
-
-	.nav-link.active,
-	.nav-link:hover {
-		color: var(--text-primary);
-	}
-
-	.nav-link.active::after {
-		content: '';
-		position: absolute;
-		bottom: 0;
-		left: 0;
-		width: 100%;
-		height: 2px;
-		background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
-		border-radius: 2px;
 	}
 
 	.main-content {
@@ -128,18 +57,7 @@
 		font-size: 0.85rem;
 	}
 
-	/* Responsive Header cho Mobile */
 	@media (max-width: 640px) {
-		.header-content {
-			flex-direction: column;
-			gap: 16px;
-			padding: 16px;
-		}
-
-		.nav-links {
-			gap: 16px;
-		}
-
 		.main-content {
 			padding: 20px 16px;
 		}

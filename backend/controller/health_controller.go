@@ -1,28 +1,28 @@
-package controllers
+package controller
 
 import (
 	"net/http"
 	"sync"
 
 	"github.com/gin-gonic/gin"
-	"github.com/ryu-1905/meow/services"
+	"github.com/ryu-1905/meow/service"
 )
 
 // HealthResponse đại diện cho cấu trúc dữ liệu JSON trả về từ API Health Check
 type HealthResponse struct {
 	Status         string              `json:"status" example:"UP"`
 	DatabaseStatus string              `json:"database_status" example:"CONNECTED"`
-	ServerInfo     services.ServerInfo `json:"server_info"`
+	ServerInfo     service.ServerInfo  `json:"server_info"`
 	AppLogs        []string            `json:"app_logs" example:"[\"2026/05/30 15:00:00 Server starting on port 8080\"]"`
 }
 
 // HealthController quản lý các HTTP request liên quan đến sức khỏe hệ thống
 type HealthController struct {
-	healthService *services.HealthService
+	healthService *service.HealthService
 }
 
 // NewHealthController khởi tạo một instance mới của HealthController
-func NewHealthController(hs *services.HealthService) *HealthController {
+func NewHealthController(hs *service.HealthService) *HealthController {
 	return &HealthController{
 		healthService: hs,
 	}

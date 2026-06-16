@@ -1,5 +1,5 @@
 .env
 *.exe
-docs/
+doc/
 *.log
 go.sum

@@ -1,9 +1,9 @@
-package database
+package config
 
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -45,7 +45,7 @@ func InitDB(connStr string) (*pgxpool.Pool, error) {
 			return
 		}
 
-		log.Println("Kết nối cơ sở dữ liệu PostgreSQL đã được thiết lập thành công qua Connection Pool.")
+		slog.Info("Kết nối cơ sở dữ liệu PostgreSQL đã được thiết lập thành công qua Connection Pool.")
 	})
 
 	return dbPool, err
@@ -55,3 +55,7 @@ func InitDB(connStr string) (*pgxpool.Pool, error) {
 func GetDB() *pgxpool.Pool {
 	return dbPool
 }
+
+
+
+

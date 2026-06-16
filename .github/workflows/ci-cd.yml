@@ -2,34 +2,54 @@ name: Meow Fullstack CI/CD
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - main
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
+    name: Deploy to SSH Server
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Source Code
+        uses: actions/checkout@v4.1.7
 
-      - uses: appleboy/ssh-action@v1.0.3
+      - name: Execute Remote Deployment Commands via SSH
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            export PATH=$PATH:/usr/local/go/bin:/home/${{secrets.SSH_USER}}/go/bin || true
-            sudo systemctl stop ${{vars.BACKEND_ARTIFACT_NAME}} ${{vars.FRONTEND_ARTIFACT_NAME}} || true
-            cd ${{vars.DEPLOY_DIR}}
+            # Set PATH to include Go bin directory
+            export PATH=$PATH:/usr/local/go/bin:/home/${{ secrets.SSH_USER }}/go/bin || true
+
+            echo "Stopping systemd services..."
+            sudo systemctl stop ${{ vars.BACKEND_ARTIFACT_NAME }} ${{ vars.FRONTEND_ARTIFACT_NAME }} || true
+
+            echo "Navigating to deploy directory and pulling latest code..."
+            cd ${{ vars.DEPLOY_DIR }}
             git pull
-            cd ${{vars.DEPLOY_DIR}}/backend
+
+            echo "Building backend module..."
+            cd ${{ vars.DEPLOY_DIR }}/backend
             rm -rf build/* || true
             go mod download
             swag init
             go mod tidy
-            go build -o build/${{vars.BACKEND_ARTIFACT_NAME}}
-            cd ${{vars.DEPLOY_DIR}}/frontend
+            go build -o build/${{ vars.BACKEND_ARTIFACT_NAME }}
+
+            echo "Building frontend module..."
+            cd ${{ vars.DEPLOY_DIR }}/frontend
             rm -rf build/* || true
-            npm i
+            npm install
             npm run build
-            sudo systemctl enable ${{vars.BACKEND_ARTIFACT_NAME}} ${{vars.FRONTEND_ARTIFACT_NAME}}
-            sudo systemctl restart ${{vars.BACKEND_ARTIFACT_NAME}} ${{vars.FRONTEND_ARTIFACT_NAME}}
+
+            echo "Restarting services and reloading Caddy web server..."
+            sudo systemctl enable ${{ vars.BACKEND_ARTIFACT_NAME }} ${{ vars.FRONTEND_ARTIFACT_NAME }}
+            sudo systemctl restart ${{ vars.BACKEND_ARTIFACT_NAME }} ${{ vars.FRONTEND_ARTIFACT_NAME }}
             sudo systemctl reload caddy
+
+            echo "Deployment finished successfully!"

@@ -1,4 +1,4 @@
-package controllers
+package controller_test
 
 import (
 	"encoding/json"
@@ -9,8 +9,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"github.com/ryu-1905/meow/database"
-	"github.com/ryu-1905/meow/services"
+	"github.com/ryu-1905/meow/config"
+	"github.com/ryu-1905/meow/controller"
+	"github.com/ryu-1905/meow/service"
 )
 
 // TestGetHealth_Disconnected kiểm tra API Health Check khi Database bị ngắt kết nối
@@ -19,8 +20,8 @@ func TestGetHealth_Disconnected(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	// Khởi tạo service không có db connection (nil)
-	hs := services.NewHealthService(nil)
-	hc := NewHealthController(hs)
+	hs := service.NewHealthService(nil)
+	hc := controller.NewHealthController(hs)
 
 	// Thiết lập router test
 	r := gin.New()
@@ -39,7 +40,7 @@ func TestGetHealth_Disconnected(t *testing.T) {
 		t.Errorf("Mong đợi status 200, nhưng nhận được %d", w.Code)
 	}
 
-	var response HealthResponse
+	var response controller.HealthResponse
 	err = json.Unmarshal(w.Body.Bytes(), &response)
 	if err != nil {
 		t.Fatalf("Không thể parse JSON phản hồi: %v", err)
@@ -68,14 +69,14 @@ func TestGetHealth_Connected(t *testing.T) {
 	}
 
 	// Khởi tạo Database Pool thật
-	dbPool, err := database.InitDB(dbURL)
+	dbPool, err := config.InitDB(dbURL)
 	if err != nil {
 		t.Fatalf("Không thể kết nối tới cơ sở dữ liệu thật: %v", err)
 	}
 	defer dbPool.Close()
 
-	hs := services.NewHealthService(dbPool)
-	hc := NewHealthController(hs)
+	hs := service.NewHealthService(dbPool)
+	hc := controller.NewHealthController(hs)
 
 	// Thiết lập router test
 	r := gin.New()
@@ -94,7 +95,7 @@ func TestGetHealth_Connected(t *testing.T) {
 		t.Errorf("Mong đợi status 200, nhưng nhận được %d", w.Code)
 	}
 
-	var response HealthResponse
+	var response controller.HealthResponse
 	err = json.Unmarshal(w.Body.Bytes(), &response)
 	if err != nil {
 		t.Fatalf("Không thể parse JSON phản hồi: %v", err)
