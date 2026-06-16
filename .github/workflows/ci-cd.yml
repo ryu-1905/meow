@@ -22,6 +22,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
+          script_stop: true
           script: |
             echo "Stopping systemd services..."
             sudo systemctl stop ${{ vars.BACKEND_ARTIFACT_NAME }} ${{ vars.FRONTEND_ARTIFACT_NAME }} || true
