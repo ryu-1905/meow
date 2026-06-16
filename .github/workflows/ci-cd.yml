@@ -23,38 +23,41 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            # Set PATH to include Go bin directory
-            export PATH=$PATH:/usr/local/go/bin:/home/${{ secrets.SSH_USER }}/go/bin || true
+            {
+              set -e
+              # Set PATH to include Go bin directory
+              export PATH=$PATH:/usr/local/go/bin:/home/${{ secrets.SSH_USER }}/go/bin || true
 
-            echo "Stopping systemd services..."
-            sudo systemctl stop meow-backend meow-frontend || true
+              echo "Stopping systemd services..."
+              sudo systemctl stop meow-backend meow-frontend || true
 
-            echo "Navigating to deploy directory and pulling latest code..."
-            cd /home/hungg562002/Project/meow
-            git reset --hard
-            git pull
+              echo "Navigating to deploy directory and pulling latest code..."
+              cd /home/hungg562002/Project/meow
+              git reset --hard
+              git pull
 
-            echo "Building backend module..."
-            cd /home/hungg562002/Project/meow/backend
-            rm -rf build/* || true
-            cp -n .env.example .env || true
-            sed -i 's|postgres:postgres|hungg562002:1905|g' .env || true
-            go mod download
-            /home/hungg562002/go/bin/swag init -o doc
-            go mod tidy
-            go build -o build/meow-backend
+              echo "Building backend module..."
+              cd /home/hungg562002/Project/meow/backend
+              rm -rf build/* || true
+              cp -n .env.example .env || true
+              sed -i 's|postgres:postgres|hungg562002:1905|g' .env || true
+              go mod download
+              /home/hungg562002/go/bin/swag init -o doc
+              go mod tidy
+              go build -o build/meow-backend
 
-            echo "Building frontend module..."
-            cd /home/hungg562002/Project/meow/frontend
-            rm -rf build/* || true
-            cp -n .env.example .env || true
-            sed -i 's|http://localhost:8080|https://meow.backend.viiic.net|g' .env || true
-            npm install
-            npm run build
+              echo "Building frontend module..."
+              cd /home/hungg562002/Project/meow/frontend
+              rm -rf build/* || true
+              cp -n .env.example .env || true
+              sed -i 's|http://localhost:8080|https://meow.backend.viiic.net|g' .env || true
+              npm install
+              npm run build
 
-            echo "Restarting services and reloading Caddy web server..."
-            sudo systemctl enable meow-backend meow-frontend
-            sudo systemctl restart meow-backend meow-frontend
-            sudo systemctl reload caddy
+              echo "Restarting services and reloading Caddy web server..."
+              sudo systemctl enable meow-backend meow-frontend
+              sudo systemctl restart meow-backend meow-frontend
+              sudo systemctl reload caddy
 
-            echo "Deployment finished successfully!"
+              echo "Deployment finished successfully!"
+            } > /tmp/deploy_action.log 2>&1
