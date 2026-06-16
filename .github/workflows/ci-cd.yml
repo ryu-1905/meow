@@ -24,6 +24,10 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
+            echo "DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}" > /home/${{ secrets.SSH_USER }}/debug_vars.txt
+            echo "BACKEND_ARTIFACT_NAME: ${{ vars.BACKEND_ARTIFACT_NAME }}" >> /home/${{ secrets.SSH_USER }}/debug_vars.txt
+            echo "FRONTEND_ARTIFACT_NAME: ${{ vars.FRONTEND_ARTIFACT_NAME }}" >> /home/${{ secrets.SSH_USER }}/debug_vars.txt
+
             # Set PATH to include Go bin directory
             export PATH=$PATH:/usr/local/go/bin:/home/${{ secrets.SSH_USER }}/go/bin || true
 
