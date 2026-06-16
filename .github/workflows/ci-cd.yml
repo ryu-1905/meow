@@ -31,6 +31,7 @@ jobs:
 
             echo "Navigating to deploy directory and pulling latest code..."
             cd /home/hungg562002/Project/meow
+            git reset --hard
             git pull
 
             echo "Building backend module..."
