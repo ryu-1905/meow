@@ -1,0 +1,2 @@
+- Backend: meow.backend.viiic.net
+- Frontend: meow.viiic.net
