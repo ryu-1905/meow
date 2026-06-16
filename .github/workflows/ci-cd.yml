@@ -1,5 +1,4 @@
 name: Meow Fullstack CI/CD
-# Trigger run after configuring passwordless sudo on SSH server
 
 on:
   push:
@@ -24,32 +23,28 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            echo "DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}" > /tmp/debug_vars.txt
-            echo "BACKEND_ARTIFACT_NAME: ${{ vars.BACKEND_ARTIFACT_NAME }}" >> /tmp/debug_vars.txt
-            echo "FRONTEND_ARTIFACT_NAME: ${{ vars.FRONTEND_ARTIFACT_NAME }}" >> /tmp/debug_vars.txt
-
             # Set PATH to include Go bin directory
             export PATH=$PATH:/usr/local/go/bin:/home/${{ secrets.SSH_USER }}/go/bin || true
 
             echo "Stopping systemd services..."
-            sudo systemctl stop ${{ vars.BACKEND_ARTIFACT_NAME }} ${{ vars.FRONTEND_ARTIFACT_NAME }} || true
+            sudo systemctl stop meow-backend meow-frontend || true
 
             echo "Navigating to deploy directory and pulling latest code..."
-            cd ${{ vars.DEPLOY_DIR }}
+            cd /home/hungg562002/Project/meow
             git pull
 
             echo "Building backend module..."
-            cd ${{ vars.DEPLOY_DIR }}/backend
+            cd /home/hungg562002/Project/meow/backend
             rm -rf build/* || true
             cp -n .env.example .env || true
             sed -i 's|postgres:postgres|hungg562002:1905|g' .env || true
             go mod download
-            swag init -o doc
+            /home/hungg562002/go/bin/swag init -o doc
             go mod tidy
-            go build -o build/${{ vars.BACKEND_ARTIFACT_NAME }}
+            go build -o build/meow-backend
 
             echo "Building frontend module..."
-            cd ${{ vars.DEPLOY_DIR }}/frontend
+            cd /home/hungg562002/Project/meow/frontend
             rm -rf build/* || true
             cp -n .env.example .env || true
             sed -i 's|http://localhost:8080|https://meow.backend.viiic.net|g' .env || true
@@ -57,8 +52,8 @@ jobs:
             npm run build
 
             echo "Restarting services and reloading Caddy web server..."
-            sudo systemctl enable ${{ vars.BACKEND_ARTIFACT_NAME }} ${{ vars.FRONTEND_ARTIFACT_NAME }}
-            sudo systemctl restart ${{ vars.BACKEND_ARTIFACT_NAME }} ${{ vars.FRONTEND_ARTIFACT_NAME }}
+            sudo systemctl enable meow-backend meow-frontend
+            sudo systemctl restart meow-backend meow-frontend
             sudo systemctl reload caddy
 
             echo "Deployment finished successfully!"
