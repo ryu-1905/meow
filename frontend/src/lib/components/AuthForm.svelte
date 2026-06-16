@@ -6,6 +6,9 @@
 	let nameInput = $state('');
 	let emailInput = $state('');
 	let passwordInput = $state('');
+	let confirmPasswordInput = $state('');
+	let showPassword = $state(false);
+	let showConfirmPassword = $state(false);
 	let formError = $state<string | null>(null);
 	let formSuccess = $state<string | null>(null);
 
@@ -30,6 +33,16 @@
 			formError = 'Mật khẩu phải có độ dài tối thiểu 4 ký tự.';
 			return;
 		}
+		if (authMode === 'register') {
+			if (!confirmPasswordInput) {
+				formError = 'Vui lòng xác nhận lại mật khẩu.';
+				return;
+			}
+			if (passwordInput !== confirmPasswordInput) {
+				formError = 'Mật khẩu xác nhận không khớp.';
+				return;
+			}
+		}
 
 		if (authMode === 'login') {
 			const success = await auth.login(emailInput, passwordInput);
@@ -38,6 +51,9 @@
 				nameInput = '';
 				emailInput = '';
 				passwordInput = '';
+				confirmPasswordInput = '';
+				showPassword = false;
+				showConfirmPassword = false;
 			} else {
 				formError = auth.error;
 			}
@@ -48,6 +64,9 @@
 				nameInput = '';
 				emailInput = '';
 				passwordInput = '';
+				confirmPasswordInput = '';
+				showPassword = false;
+				showConfirmPassword = false;
 			} else {
 				formError = auth.error;
 			}
@@ -76,6 +95,10 @@
 					authMode = 'login';
 					formError = null;
 					formSuccess = null;
+					passwordInput = '';
+					confirmPasswordInput = '';
+					showPassword = false;
+					showConfirmPassword = false;
 				}}
 			>
 				Đăng nhập
@@ -86,6 +109,10 @@
 					authMode = 'register';
 					formError = null;
 					formSuccess = null;
+					passwordInput = '';
+					confirmPasswordInput = '';
+					showPassword = false;
+					showConfirmPassword = false;
 				}}
 			>
 				Đăng ký
@@ -151,15 +178,85 @@
 						</svg>
 					</span>
 					<input
-						type="password"
+						type={showPassword ? 'text' : 'password'}
 						id="password"
 						placeholder="••••••••"
 						class="input-field"
 						bind:value={passwordInput}
 						disabled={auth.loading}
 					/>
+					<button
+						type="button"
+						class="toggle-password"
+						onclick={() => showPassword = !showPassword}
+						aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
+						disabled={auth.loading}
+					>
+						{#if showPassword}
+							<svg viewBox="0 0 24 24" width="18" height="18">
+								<path
+									fill="currentColor"
+									d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.82l2.92 2.92c1.51-1.2 2.7-2.78 3.44-4.74-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-4 .7l2.17 2.17C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.34-4.3l1.6 1.6C12.94 7.04 12.48 7 12 7c-2.76 0-5 2.24-5 5 0 .48.04.94.1 1.47l1.6 1.6C8.83 14.47 9 13.27 9 12c0-1.66 1.34-3 3-3 1.27 0 2.47-.17 3.07-.3z"
+								/>
+							</svg>
+						{:else}
+							<svg viewBox="0 0 24 24" width="18" height="18">
+								<path
+									fill="currentColor"
+									d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+								/>
+							</svg>
+						{/if}
+					</button>
 				</div>
 			</div>
+
+			{#if authMode === 'register'}
+				<div class="form-group">
+					<label for="confirm-password" class="form-label">Xác nhận mật khẩu</label>
+					<div class="input-wrapper">
+						<span class="input-icon">
+							<svg viewBox="0 0 24 24" width="18" height="18">
+								<path
+									fill="currentColor"
+									d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"
+								/>
+							</svg>
+						</span>
+						<input
+							type={showConfirmPassword ? 'text' : 'password'}
+							id="confirm-password"
+							placeholder="••••••••"
+							class="input-field"
+							bind:value={confirmPasswordInput}
+							disabled={auth.loading}
+						/>
+						<button
+							type="button"
+							class="toggle-password"
+							onclick={() => showConfirmPassword = !showConfirmPassword}
+							aria-label={showConfirmPassword ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
+							disabled={auth.loading}
+						>
+							{#if showConfirmPassword}
+								<svg viewBox="0 0 24 24" width="18" height="18">
+									<path
+										fill="currentColor"
+										d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.82l2.92 2.92c1.51-1.2 2.7-2.78 3.44-4.74-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-4 .7l2.17 2.17C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.34-4.3l1.6 1.6C12.94 7.04 12.48 7 12 7c-2.76 0-5 2.24-5 5 0 .48.04.94.1 1.47l1.6 1.6C8.83 14.47 9 13.27 9 12c0-1.66 1.34-3 3-3 1.27 0 2.47-.17 3.07-.3z"
+									/>
+								</svg>
+							{:else}
+								<svg viewBox="0 0 24 24" width="18" height="18">
+									<path
+										fill="currentColor"
+										d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+									/>
+								</svg>
+							{/if}
+						</button>
+					</div>
+				</div>
+			{/if}
 
 			{#if formError}
 				<div class="auth-error">
@@ -319,7 +416,7 @@
 		background: rgba(255, 255, 255, 0.02);
 		border: 1px solid var(--glass-border);
 		border-radius: var(--radius-sm);
-		padding: 12px 14px 12px 42px;
+		padding: 12px 42px 12px 42px;
 		color: var(--text-primary);
 		font-family: var(--font-sans);
 		font-size: 0.95rem;
@@ -399,5 +496,29 @@
 		80% {
 			transform: translateX(6px);
 		}
+	}
+
+	.toggle-password {
+		position: absolute;
+		right: 14px;
+		background: transparent;
+		border: none;
+		color: var(--text-muted);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		padding: 0;
+		transition: var(--transition-fast);
+	}
+
+	.toggle-password:hover {
+		color: var(--accent-cyan);
+		filter: drop-shadow(0 0 4px rgba(0, 242, 254, 0.4));
+	}
+
+	.toggle-password:focus {
+		outline: none;
+		color: var(--accent-cyan);
 	}
 </style>

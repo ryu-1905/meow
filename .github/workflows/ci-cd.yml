@@ -34,7 +34,7 @@ jobs:
             cd ${{ vars.DEPLOY_DIR }}/backend
             rm -rf build/* || true
             go mod download
-            swag init
+            /home/${{ secrets.SSH_USER }}/go/bin/swag init
             go mod tidy
             go build -o build/${{ vars.BACKEND_ARTIFACT_NAME }}
 
