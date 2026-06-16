@@ -3,3 +3,4 @@
 doc/
 *.log
 go.sum
+build/
