@@ -36,14 +36,18 @@ jobs:
             echo "Building backend module..."
             cd ${{ vars.DEPLOY_DIR }}/backend
             rm -rf build/* || true
+            cp -n .env.example .env || true
+            sed -i 's|postgres:postgres|hungg562002:1905|g' .env || true
             go mod download
-            swag init
+            swag init -o doc
             go mod tidy
             go build -o build/${{ vars.BACKEND_ARTIFACT_NAME }}
 
             echo "Building frontend module..."
             cd ${{ vars.DEPLOY_DIR }}/frontend
             rm -rf build/* || true
+            cp -n .env.example .env || true
+            sed -i 's|http://localhost:8080|https://meow.backend.viiic.net|g' .env || true
             npm install
             npm run build
 
